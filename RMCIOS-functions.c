@@ -336,8 +336,7 @@ void return_string (const struct context_rmcios *context,
          if (string[si] == 0)
             break;      // end of string 
       }
-      if (si < 0)
-         si = 0;
+      if (si < 0) si = 0;
       if (string[si] != 0)
       {
          while (string[++si] != 0);
@@ -632,6 +631,58 @@ int param_to_integer (const struct context_rmcios *context,
                                   (const union param_rmcios) p->param, index);
       }
       break;
+   }
+   return returnv;
+}
+
+int param_to_channel (const struct context_rmcios *context,
+                  enum type_rmcios paramtype,
+                  const union param_rmcios params, int index)
+{
+   int returnv = 0;
+   int ch_enum;
+   int len;
+   if (params.p == 0)
+      return returnv;
+   switch (paramtype)
+   {
+   case float_rmcios:
+      returnv = params.fv[index];
+      break;
+   case int_rmcios:
+      returnv = params.iv[index];
+      break;
+   case channel_rmcios:
+   case buffer_rmcios:
+   case binary_rmcios:
+      // get space needed for string
+      len = param_string_alloc_size (context, paramtype, params, index);        
+      {
+         // allocate space for string
+         char buffer[len];      
+         const char *s;
+         // convert to string
+         s = param_to_string (context, paramtype, params, index, len, buffer);  
+         ch_enum = channel_enum (context, s);   
+         // set return value to channel enum
+         returnv = ch_enum;  
+      }
+      break;
+   case combo_rmcios:
+      {
+         struct combo_rmcios *p = params.cv;
+         while (index >= p->num_params)
+         {
+            index -= p->num_params;
+            if (p->next == 0)
+               p++;
+            else
+               p = p->next;
+         }
+         return param_to_channel (context, p->paramtype, p->param, index);
+      }
+      break;
+
    }
    return returnv;
 }
@@ -1188,19 +1239,20 @@ int read_i (const struct context_rmcios *context, int channel)
    return ireturn;
 }
 
-void read_str (const struct context_rmcios *context,
+int read_str (const struct context_rmcios *context,
                int channel, char *string, int maxlen)
 {
    struct buffer_rmcios sreturn;
-   sreturn.size = maxlen - 1;
+   if(maxlen!=0) sreturn.size = maxlen - 1;
+   else sreturn.size=0 ;
    sreturn.data = string;
    sreturn.length = 0;
    context->run_channel (context, channel,
                          read_rmcios, buffer_rmcios,
                          (union param_rmcios) &sreturn,
                          0, (const union param_rmcios) 0);
-
-   sreturn.data[sreturn.length] = 0;    // Add NULL-termination
+   if(sreturn.size!=0) sreturn.data[sreturn.length] = 0;    // Add NULL-termination
+   return sreturn.required_size ;
 }
 
 // Write value to channel  (float/integer)

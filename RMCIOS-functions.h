@@ -423,7 +423,8 @@ extern "C"
 /// @param channel handle of channel to be read
 /// @param string buffer to read to
 /// @param maxlen size of buffer @p string
-    void read_str (const struct context_rmcios *context,
+//  @return required size to fit all data from channel.
+    int read_str (const struct context_rmcios *context,
                    int channel, char *string, int maxlen);
 
 /// @brief Write single float value to channel  (float)
