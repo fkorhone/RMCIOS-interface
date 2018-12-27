@@ -154,19 +154,6 @@ extern "C"
         struct combo_rmcios *next;
     };
 
-/// @brief Union for describing parameters
-    union value_rmcios
-    {
-        /// paramtype==int_rmcios
-        int i;
-        /// paramtype==float_rmcios
-        float f;
-        /// paramtype==buffer_rmcios
-        struct buffer_rmcios b;
-        /// paramtype==combo_rmcios
-        struct combo_rmcios c;
-    };
-
     struct context_rmcios;
 
 /// @brief Typedef for channel callback funtion pointer. 

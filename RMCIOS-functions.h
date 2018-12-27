@@ -43,7 +43,7 @@ extern "C"
 {
 #endif
 
-#include "RMCIOS-api.h"
+#include "RMCIOS-API.h"
 #include "shared_resource.h"
 
 #define info(context, channel,message,...) if(channel!=0) write_str(context, channel, message, 0)
