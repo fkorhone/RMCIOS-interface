@@ -75,13 +75,61 @@ int function_enum (const char *name)
 // ***********************************************************************
 // Channelsystem functions that depend only on API interface functions: 
 // ***********************************************************************
+int create_channel (const struct context_rmcios *context,
+                    const char *namebuffer, int namelen,
+                    class_rmcios class_func, void *data)
+{
+   struct buffer_rmcios buffers[3] = {
+      {
+         .data          = (void *)namebuffer,
+         .length        = namelen,
+         .size          = 0,
+         .required_size = namelen,
+         .trailing_size = 0,
+      },
+      {
+         .data          = (void *)&class_func, // function pointer as binary
+         .length        = sizeof(class_func),
+         .size          = 0,
+         .required_size = sizeof(class_func),
+         .trailing_size = 0,
+      },
+      {
+         .data          = (void *)&data, // data pointer as binary
+         .length        = sizeof(data),
+         .size          = 0,
+         .required_size = sizeof(data),
+         .trailing_size = 0,
+      }
+   };
+   union param_rmcios param = {
+      .bv = buffers
+   };
+   int ireturn;
+   struct combo_rmcios returnv=
+   {
+        .paramtype = int_rmcios,
+        .num_params = 1,
+        .param.iv = &ireturn,
+        .next = 0
+   };
+
+   context->run_channel(context,
+                        context->create,
+                        create_rmcios,
+                        binary_rmcios,
+                        &returnv,
+                        3, param);
+   return ireturn;
+}
 
 // Create a channel using channel parameters as new channel name.
 int create_channel_param (const struct context_rmcios *context,
                           enum type_rmcios paramtype,
                           const union param_rmcios param,
                           int index,
-                          class_rmcios channel_function, void *channel_data)
+                          class_rmcios channel_function, 
+                          void *channel_data)
 {
    // Determine the name size:
    int namelen = param_string_length (context, paramtype, param, index);
@@ -89,8 +137,8 @@ int create_channel_param (const struct context_rmcios *context,
    char *name = (char *) allocate_storage (context, namelen + 1, 0);
    // Get the name:
    param_to_string (context, paramtype, param, index, namelen + 1, name);
-   // Create channel and return id: 
-   return context->create_channel (context, name, namelen, channel_function,
+
+   return create_channel(context, name, namelen, channel_function,
                                    channel_data);
 }
 
@@ -124,8 +172,8 @@ int create_channel_str (const struct context_rmcios *context,
 {
    int len;
    for (len = 0; channel_name[len] != 0; len++);        // look length of name
-   return context->create_channel (context, channel_name, len,
-                                   channel_function, channel_data);
+   return create_channel(context, channel_name, len,
+                         channel_function, channel_data);
 }
 
 // Create a channel that inherits existing channel name as basename. 
@@ -401,9 +449,9 @@ void return_buffer (const struct context_rmcios *context,
       {
          struct buffer_rmcios sreturn;
          sreturn.length = length;
-         sreturn.size = length;
-         sreturn.required_size=length ;
-         sreturn.trailing_size=0 ;
+         sreturn.size = 0;
+         sreturn.required_size = length;
+         sreturn.trailing_size = 0;
          sreturn.data = (char *) buffer;
          context->run_channel (context, returnv->param.channel, write_rmcios, 
                                  buffer_rmcios, 0, 1, 
@@ -498,10 +546,17 @@ void return_binary (const struct context_rmcios *context,
 void return_void (const struct context_rmcios *context,
                   struct combo_rmcios *returnv)
 {
+   if (returnv == 0)
+   {
+      return;
+   }
+   
    if (returnv->paramtype == channel_rmcios)
+   {
       context->run_channel (context, returnv->param.channel, write_rmcios,
                             buffer_rmcios, 0, 0,
                             (const union param_rmcios) 0);
+   }
    else if (returnv->paramtype == combo_rmcios)
    {
       struct combo_rmcios *creturn = returnv->param.cv;
@@ -885,17 +940,7 @@ struct buffer_rmcios param_to_buffer (const struct context_rmcios *context,
          // add extra NULL terminator for string compatibility
          to_str[length] = 0;    
 
-      if (p_buffer.size < p_buffer.length)      
-      // Return the user buffer
-      {
-         // payload size
-         rbuffer.length = length;       
-         rbuffer.size = maxlen;
-         rbuffer.data = to_str;
-         // return structure pointing to user buffer
-         return rbuffer;        
-      }
-      else
+
          // Return the orginal parameter data
          return params.bv[index];       
    case combo_rmcios:
@@ -923,7 +968,7 @@ struct buffer_rmcios param_to_buffer (const struct context_rmcios *context,
 struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
                                       enum type_rmcios paramtype,
                                       const union param_rmcios params,
-                                      int index, int maxlen, char *buffer)
+                                      int index, int maxlen, void *buffer)
 {
    struct buffer_rmcios rbuffer;
    struct buffer_rmcios p_buffer;
@@ -957,23 +1002,12 @@ struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
       p_buffer = params.bv[index];
 
       // Copy data to user buffer
-      int length;
-      length =
-         copy_mem_safe (p_buffer.data, p_buffer.length, buffer, maxlen);
+      copy_mem_safe (p_buffer.data, p_buffer.length, 
+                     buffer, maxlen);
 
-      // Return the user buffer
-      if (p_buffer.size < p_buffer.length)      
-      {
-         // payload size
-         rbuffer.length = length;       
-         rbuffer.size = maxlen;
-         rbuffer.data = buffer;
-         // return structure pointing to user buffer
-         return rbuffer;        
-      }
-      else
-         // Return the orginal parameter data
-         return params.bv[index];       
+      // Return the orginal parameter data
+      return params.bv[index]; 
+
    case combo_rmcios:
       {
          struct combo_rmcios *p = params.cv;
@@ -1201,33 +1235,34 @@ int param_buffer_alloc_size (const struct context_rmcios *context,
    return 0;
 }
 
-// Reads data from channel 
 float read_f (const struct context_rmcios *context, int channel)
 {
+   float rvalue = 0;
    struct combo_rmcios returnv = {
       .paramtype = float_rmcios,
       .num_params = 1,
-      .param.f = 0
+      .param.fv = &rvalue
    };
    context->run_channel (context, channel,
                          read_rmcios, float_rmcios,
                          &returnv,
                          0, (const union param_rmcios) 0);
-   return returnv.param.f;
+   return rvalue;
 }
 
 int read_i (const struct context_rmcios *context, int channel)
 {
+   int rvalue = 0;
    struct combo_rmcios returnv = {
       .paramtype = int_rmcios,
       .num_params = 1,
-      .param.i = 0
+      .param.iv = &rvalue
    };
    context->run_channel (context, channel,
                          read_rmcios, int_rmcios,
                          &returnv,
                          0, (const union param_rmcios) 0);
-   return returnv.param.i;
+   return rvalue;
 }
 
 int read_str (const struct context_rmcios *context,
@@ -1252,62 +1287,65 @@ int read_str (const struct context_rmcios *context,
    return sreturn.required_size ;
 }
 
-// Write value to channel  (float/integer)
 float write_f (const struct context_rmcios *context, int channel, float value)
 {
+   float rvalue = 0;
    struct combo_rmcios returnv = {
       .paramtype = float_rmcios,
       .num_params = 1,
-      .param.f = 0
+      .param.fv = &rvalue
    };
    context->run_channel (context, channel,
                          write_rmcios, float_rmcios,
                          &returnv,
                          1, (const union param_rmcios) &value);
-   return returnv.param.f;
+   return rvalue;
 }
 
 float write_fv (const struct context_rmcios *context, int channel, int params,
                 float *values)
 {
+   float rvalue = 0;
    struct combo_rmcios returnv = {
       .paramtype = float_rmcios,
       .num_params = 1,
-      .param.f = 0
+      .param.fv = &rvalue
    };
    context->run_channel (context, channel,
                          write_rmcios, float_rmcios,
                          &returnv,
                          params, (const union param_rmcios) values);
-   return returnv.param.f;
+   return rvalue;
 }
 
 int write_iv (const struct context_rmcios *context, int channel, int params,
               int *values)
 {
+   int rvalue = 0;
    struct combo_rmcios returnv = {
       .paramtype = int_rmcios,
       .num_params = 1,
-      .param.i = 0
+      .param.iv = &rvalue
    };
    context->run_channel (context, channel,
                          write_rmcios, int_rmcios,
                          &returnv,
                          params, (const union param_rmcios) values);
-   return returnv.param.i;
+   return rvalue;
 }
 
 int write_i (const struct context_rmcios *context, int channel, int value)
 {
+   int rvalue = 0;
    struct combo_rmcios returnv = {
       .paramtype = int_rmcios,
       .num_params = 1,
-      .param.i = 0
+      .param.iv = &rvalue
    };
    context->run_channel (context, channel, write_rmcios, int_rmcios,
                          &returnv, 1,
                          (const union param_rmcios) &value);
-   return returnv.param.i;
+   return rvalue;
 }
 
 void write_str (const struct context_rmcios *context,
@@ -1362,7 +1400,7 @@ int write_binary (const struct context_rmcios *context,
    struct buffer_rmcios param = {
       .data = (char *) buffer,
       .length = length,       
-      .size = length,
+      .size = 0,
       .required_size = length,
       .trailing_size = 0
    };
@@ -1388,16 +1426,17 @@ int write_binary (const struct context_rmcios *context,
 
 int linked_channels (const struct context_rmcios *context, int channel)
 {
+   int ireturn;
    struct combo_rmcios returnv = {
       .paramtype = int_rmcios,
       .num_params = 1,
-      .param.i = 0
+      .param.iv = &ireturn
    };
    context->run_channel (context, context->link,
                          read_rmcios, int_rmcios,
                          &returnv,
                          1, (const union param_rmcios) &channel);
-   return returnv.param.i;
+   return ireturn;
 }
 
 void *allocate_storage (const struct context_rmcios *context, int size,
@@ -1439,8 +1478,8 @@ void free_storage (const struct context_rmcios *context, void *ptr,
    param[1].data = (char *) &ptr;
    param[1].size = 0;
    param[1].length = sizeof (ptr);
-   if (storage_channel == 0)
-      storage_channel = context->mem;
+   if (storage_channel == 0) storage_channel = context->mem;
+
    context->run_channel (context, storage_channel, write_rmcios,
                          binary_rmcios, 0, 2,
                          (const union param_rmcios) param);
@@ -1449,11 +1488,12 @@ void free_storage (const struct context_rmcios *context, void *ptr,
 int channel_enum (const struct context_rmcios *context,
                   const char *channel_name)
 {
+   int ireturn;
    struct buffer_rmcios param;
    struct combo_rmcios returnv = {
       .paramtype = int_rmcios,
       .num_params = 1,
-      .param.i = 0
+      .param.iv = &ireturn
    };
    int slen;
    param.data = (void *) channel_name;
@@ -1465,7 +1505,7 @@ int channel_enum (const struct context_rmcios *context,
                          read_rmcios, buffer_rmcios,
                          &returnv,
                          1, (const union param_rmcios) &param);
-   return returnv.param.i;
+   return ireturn;
 }
 
 int channel_name (const struct context_rmcios *context,

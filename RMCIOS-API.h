@@ -73,15 +73,15 @@ extern "C"
         /// Runtime help
         help_rmcios = 1,
         /// Setup channel specific parameters
-        setup_rmcios = 2,
+        setup_rmcios,
         /// Write data to channel
-        write_rmcios = 4,
+        write_rmcios,
         /// Read data from channel
-        read_rmcios = 5,
+        read_rmcios,
         /// Create new channel from called channel
-        create_rmcios = 6,
+        create_rmcios,
         /// Link channel to another channel 
-        link_rmcios = 7
+        link_rmcios
     };
 
 /// @brief Structure for buffers
@@ -99,7 +99,7 @@ extern "C"
         
         /// Number of accessible metabytes after the buffer
         /// eg. NULL -terminated string buffer contain 1 trailing metabyte (0)
-        unsigned short int trailing_size ;
+        unsigned short int trailing_size;
     } ;
 
     struct combo_rmcios;
@@ -112,10 +112,7 @@ extern "C"
         /// Direct constant pointer to parameters:
         const void *cp;
 
-        /// Single integer
-        int i;
-        /// Single float
-        float f;
+
 
         /// paramtype==int_rmcios
         int *iv;
@@ -127,6 +124,7 @@ extern "C"
         struct combo_rmcios *cv;
         /// paramtype==channel_rmcios
         int channel;
+        int int_array[1];
     };
 
 /// @brief Linked list structure of parameter arrays.
@@ -181,13 +179,6 @@ extern "C"
                              struct combo_rmcios *returnv,
                              int num_params, const union param_rmcios param);
 
-        /// Function pointer for creating channels
-        int (*create_channel) (const struct context_rmcios * context,
-                               const char *channel_name_buffer,
-                               int namelen,
-                               class_rmcios channel_functions,
-                               void *channel_data);
-
         /// Data pointer for context implementation
         void *data;
         /// Channel for reading channel identifier number.
@@ -211,6 +202,8 @@ extern "C"
         int link;
         /// Channel for interacting with linked channels
         int linked;
+        /// Channel for creating new channels
+        int create;
     };
 
 #ifdef __cplusplus
