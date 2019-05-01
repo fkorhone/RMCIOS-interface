@@ -43,38 +43,27 @@ extern "C"
 /// @brief Channel function (class_rmcios ) parameter types
     enum type_rmcios
     {
-        /// Signed system integer 
         /// Parameters as signed integers.
-        /// Return data as integer. Data size=system defined
         int_rmcios = 1,
 
         /// System float point Parameters as floats. 
-        /// Return data=float.
         float_rmcios = 2,
 
-        /// Parameters as ASCII.
         /// buffer_rmcios structure containing size and pointer to buffer data.
         /// Return data is copied to address found from buffer_rmcios structure.
         /// Ammount of bytes copied is stored in the length variable.
         buffer_rmcios = 3,
 
-        /// Pamerameters as ASCII. 
-        /// WARNING :This parameter is to be changed in future
-        /// This should be a rmcios_compbo call! 
-        /// (Legacy devlopment reason for the inconsistency)
-        /// buffer_rmcios structures for datasize and a pointer to buffer data. 
-        /// return data go to a channel.
+        /// Channel identifier
         channel_rmcios = 4,
 
         /// Raw Binary buffer
         /// Parameters are raw binary arrays. 
         /// Capsuled inside buffer_rmcios structures. 
-        /// Return data to buffer_rmcios array.
         binary_rmcios = 5,
 
-        /// Variable type parameters, linked list of parameter arrays.
+        /// Variable type parameters
         /// Parameters are combo_rmcios structures
-        /// Return value is a pointer to combo_rmcios structure.
         combo_rmcios = 6
     };
 
@@ -173,7 +162,7 @@ extern "C"
                                   int id,
                                   enum function_rmcios function,
                                   enum type_rmcios paramtype,
-                                  union param_rmcios returnv,
+                                  struct combo_rmcios *returnv,
                                   int num_params,
                                   const union param_rmcios param);
 
@@ -189,7 +178,7 @@ extern "C"
                              int channel,
                              enum function_rmcios function,
                              enum type_rmcios,
-                             union param_rmcios returnv,
+                             struct combo_rmcios *returnv,
                              int num_params, const union param_rmcios param);
 
         /// Function pointer for creating channels

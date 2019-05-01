@@ -130,81 +130,70 @@ extern "C"
 /// 
 /// Helper function for implementing channels
 /// @param context pointer to target system context
-/// @param paramtype type of returnv parameter
 /// @param returnv pointer to return parameter
 /// @param value integer value to be returned
 ///
 /// @snippet examples.c return_int
     void return_int (const struct context_rmcios *context,
-                     enum type_rmcios paramtype,
-                     union param_rmcios returnv, int value);
+                     struct combo_rmcios *returnv, int value);
 
 /// @brief Return a single float from a channel:
 /// 
 /// Helper function for implementing channels
 /// @param context pointer to target system context
-/// @param paramtype type of returnv parameter
 /// @param returnv pointer to return parameter
 /// @param value float value to be returned
 ///
 /// @snippet examples.c return_float
     void return_float (const struct context_rmcios *context,
-                       enum type_rmcios paramtype,
-                       union param_rmcios returnv, float value);
+                       struct combo_rmcios *returnv, float value);
 
 /// @brief Return string from a channel:
 /// 
 /// Helper function for implementing channels
 /// @param context pointer to target system context
-/// @param paramtype type of returnv parameter
 /// @param returnv pointer to return parameter
 /// @param value NULL- terminated string to be returned
 ///
 /// @snippet examples.c return_string
     void return_string (const struct context_rmcios *context,
-                        enum type_rmcios paramtype,
-                        union param_rmcios returnv, const char *string);
+                        struct combo_rmcios *returnv, const char *string);
 
 /// @brief Return buffer from a channel:
 /// 
 /// Helper function for implementing channels
 /// @param context pointer to target system context
-/// @param paramtype type of returnv parameter
 /// @param returnv pointer to return parameter
 /// @param buffer pointer to buffer data to returned from
 /// @param length bytes in return buffer
 ///
 /// @snippet examples.c return_buffer
     void return_buffer (const struct context_rmcios *context,
-                        enum type_rmcios paramtype,
-                        union param_rmcios returnv,
+                        struct combo_rmcios *returnv,
                         const char *buffer, unsigned int length);
 
 /// @brief Return binary data from a channel:
 /// 
 /// Helper function for implementing channels
 /// @param context pointer to target system context
-/// @param paramtype type of returnv parameter
 /// @param returnv pointer to return parameter
 /// @param buffer pointer to buffer data to returned from
 /// @param length bytes in return buffer
 ///
 /// @snippet examples.c return_binary
     void return_binary (const struct context_rmcios *context,
-                        enum type_rmcios paramtype,
-                        union param_rmcios returnv,
+                        struct combo_rmcios *returnv,
                         const char *buffer, unsigned int length);
 
 /// @brief Return void (empty write to channel)
 ///
 /// Helper function for implementing channels
 /// @param context pointer to target system context
-/// @param paramtype type of returnv parameter
 /// @param returnv pointer to return parameter
 ///
 /// @snippet examples.c return_void
     void return_void (const struct context_rmcios *context,
-                      enum type_rmcios paramtype, union param_rmcios returnv);
+                      struct combo_rmcios * returnv);
 
 
     /// @brief Convert parameter to integer
