@@ -44,7 +44,6 @@ extern "C"
 #endif
 
 #include "RMCIOS-API.h"
-#include "shared_resource.h"
 
 #define info(context, channel,message,...) if(channel!=0) write_str(context, channel, message, 0)
 
@@ -56,8 +55,13 @@ extern "C"
 #endif
 
 // ***********************************************************************
-// Channelsystem functions that depend mostly only on API interface functions: 
+// Channelsystem functions that depend on API interface: 
 // ***********************************************************************
+
+
+   int create_channel (const struct context_rmcios *context,
+                       const char *namebuffer, int namelen,
+                       class_rmcios class_func, void *data);
 
 /// @brief Create a channel using channel parameters as new channel name.
 /// 
@@ -281,12 +285,12 @@ extern "C"
 /// Also modifiable size of the buffer is returned.
 ///
 /// @snippet examples.c return_string
-    struct buffer_rmcios param_to_binary (const struct context_rmcios
-                                          *context,
+    struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
                                           enum type_rmcios paramtype,
                                           const union param_rmcios param,
-                                          int index, int maxlen,
-                                          char *buffer);
+                                          int index, 
+                                          int maxlen,
+                                          void *buffer);
 
 /// @brief Convert parameter to channel identifier
 /// 
