@@ -29,7 +29,6 @@ along with RMCIOS.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "RMCIOS-functions.h"
 #include "string-conversion.h"
-#include "stream_search.h"
 
 // ****************************************************************
 // Channel system implementation:
@@ -52,24 +51,36 @@ const char *function_enum_pattern[] = {
    // (replaced with link -channel -> write link channel to_channel)
    "link", (const char *) link_rmcios,  
    // Legacy name for setup: (setup is short enough by itelf)
-   "conf", (const char *) setup_rmcios, 
-   ""
+   "conf", (const char *) setup_rmcios 
 };
+
+int function_detect(const char *name, unsigned int length)
+{
+   int func_i;
+   int i;
+
+   for (func_i = 0; func_i < 16; func_i += 2)
+   {
+      const char *function = function_enum_pattern[func_i];
+      for(i = 0; i < length; i++)
+      {
+         if (name[i] == 0) break;
+         if (name[i] != function[i]) break;
+         if (function[i+1] == 0)
+         {
+            if(name[i+1] == 0 || name[i+1] == ' ' || length == i+1)
+            {
+               return (int)function_enum_pattern[func_i+1];
+            }
+         }
+      }
+   }
+   return 0;
+}
 
 int function_enum (const char *name)
 {
-   unsigned int states;
-   const char *result = 0;
-   states = ~(0);
-   int i = 0;
-   while (states > 0)
-   {
-      if (name[i] == 0 || name[i] == ' ')
-         break;
-      result = search (i, &states, function_enum_pattern, name[i]);
-      i++;
-   }
-   return ((int) result);
+   return function_detect(name, ~0);
 }
 
 // ***********************************************************************
@@ -1046,19 +1057,11 @@ int param_to_function (const struct context_rmcios *context,
       {
          char buffer[blen];
          struct buffer_rmcios fname;
-         fname =
-            param_to_buffer (context, paramtype, param, index, blen, buffer);
+         fname = param_to_buffer (context, paramtype, 
+                                  param, index, 
+                                  blen, buffer);
 
-         unsigned int states;
-         states = ~(0);
-         int i;
-         for (i = 0; i < fname.length && states > 0; i++)
-         {
-            if (fname.data[i] == ' ')
-               break;
-            function =
-               (int) search (i, &states, function_enum_pattern, fname.data[i]);
-         }
+         function = function_detect(fname.data, fname.length);
       }
    }
    return function;
