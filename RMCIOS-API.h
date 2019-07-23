@@ -111,9 +111,6 @@ extern "C"
         void *p;
         /// Direct constant pointer to parameters:
         const void *cp;
-
-
-
         /// paramtype==int_rmcios
         int *iv;
         /// paramtype==float_rmcios
@@ -124,7 +121,6 @@ extern "C"
         struct combo_rmcios *cv;
         /// paramtype==channel_rmcios
         int channel;
-        int int_array[1];
     };
 
 /// @brief Linked list structure of parameter arrays.
@@ -172,12 +168,7 @@ extern "C"
         int version;
 
         /// Function pointer for channel implementation
-        void (*run_channel) (const struct context_rmcios * context,
-                             int channel,
-                             enum function_rmcios function,
-                             enum type_rmcios,
-                             struct combo_rmcios *returnv,
-                             int num_params, const union param_rmcios param);
+        class_rmcios run_channel;
 
         /// Data pointer for context implementation
         void *data;
