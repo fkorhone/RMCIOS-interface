@@ -116,7 +116,7 @@ int create_channel (const struct context_rmcios *context,
    union param_rmcios param = {
       .bv = buffers
    };
-   int ireturn;
+   int ireturn = 0;
    struct combo_rmcios returnv=
    {
         .paramtype = int_rmcios,
@@ -125,7 +125,7 @@ int create_channel (const struct context_rmcios *context,
         .next = 0
    };
 
-   context->run_channel(context,
+   run_channel(context,
                         context->create,
                         create_rmcios,
                         binary_rmcios,
@@ -153,11 +153,30 @@ int create_channel_param (const struct context_rmcios *context,
                                    channel_data);
 }
 
+/// @brief run channel
+void run_channel (const struct context_rmcios * context,
+                  int id,
+                  enum function_rmcios function,
+                  enum type_rmcios paramtype,
+                  struct combo_rmcios *returnv,
+                  int num_params,
+                  const union param_rmcios param)
+{
+   context->run_channel (context->data,
+                         context,
+                         id,
+                         function,
+                         paramtype,
+                         returnv,
+                         num_params,
+                         param);
+}
+
 void link_channel (const struct context_rmcios *context,
                    int channel, int to_channel)
 {
    int params[2] = { channel, to_channel };
-   context->run_channel (context, context->link, write_rmcios, int_rmcios,
+   run_channel (context, context->link, write_rmcios, int_rmcios,
                          0, 2,
                          (const union param_rmcios) params);
 }
@@ -170,7 +189,7 @@ void link_channel_function (const struct context_rmcios *context,
                             enum function_rmcios function, int to_function)
 {
    int params[4] = { channel, function, to_channel, to_function };
-   context->run_channel (context, context->link, write_rmcios, int_rmcios,
+   run_channel (context, context->link, write_rmcios, int_rmcios,
                          0, 4,
                          (const union param_rmcios) params);
 }
@@ -244,7 +263,7 @@ void return_int (const struct context_rmcios *context,
       returnv->param.iv[0] = value;
       break;
    case channel_rmcios:
-      context->run_channel (context, returnv->param.channel, write_rmcios,
+      run_channel (context, returnv->param.channel, write_rmcios,
                             int_rmcios, 0, 1,
                             (const union param_rmcios) &value);
       break;
@@ -301,9 +320,9 @@ void return_float (const struct context_rmcios *context,
       returnv->param.iv[0] = value;
       break;
    case channel_rmcios:
-      context->run_channel (context, returnv->param.channel, write_rmcios,
-                            float_rmcios, 0, 1,
-                            (const union param_rmcios) &value);
+      run_channel (context, returnv->param.channel, write_rmcios,
+                   float_rmcios, 0, 1,
+                   (const union param_rmcios) &value);
       break;
    case buffer_rmcios:
       {
@@ -376,7 +395,7 @@ void return_string (const struct context_rmcios *context,
          send_buff.required_size = i;
          // There is a trailing terminating zero
          send_buff.trailing_size = 1 ;   
-         context->run_channel (context, returnv->param.channel, write_rmcios,
+         run_channel (context, returnv->param.channel, write_rmcios,
                                buffer_rmcios, 0, 1,
                                (const union param_rmcios) &send_buff);
       }
@@ -464,7 +483,7 @@ void return_buffer (const struct context_rmcios *context,
          sreturn.required_size = length;
          sreturn.trailing_size = 0;
          sreturn.data = (char *) buffer;
-         context->run_channel (context, returnv->param.channel, write_rmcios, 
+         run_channel (context, returnv->param.channel, write_rmcios, 
                                  buffer_rmcios, 0, 1, 
                                  (const union param_rmcios) &sreturn) ;       
       }
@@ -526,7 +545,7 @@ void return_binary (const struct context_rmcios *context,
          sreturn.trailing_size=0 ;
          sreturn.data = (char *) buffer;
          // execute write to return channel
-         context->run_channel (context, returnv->param.channel, write_rmcios, 
+         run_channel (context, returnv->param.channel, write_rmcios, 
                                binary_rmcios, 0, 1, 
                                (const union param_rmcios) &sreturn);        
       }
@@ -564,7 +583,7 @@ void return_void (const struct context_rmcios *context,
    
    if (returnv->paramtype == channel_rmcios)
    {
-      context->run_channel (context, returnv->param.channel, write_rmcios,
+      run_channel (context, returnv->param.channel, write_rmcios,
                             buffer_rmcios, 0, 0,
                             (const union param_rmcios) 0);
    }
@@ -1246,7 +1265,7 @@ float read_f (const struct context_rmcios *context, int channel)
       .num_params = 1,
       .param.fv = &rvalue
    };
-   context->run_channel (context, channel,
+   run_channel (context, channel,
                          read_rmcios, float_rmcios,
                          &returnv,
                          0, (const union param_rmcios) 0);
@@ -1261,7 +1280,7 @@ int read_i (const struct context_rmcios *context, int channel)
       .num_params = 1,
       .param.iv = &rvalue
    };
-   context->run_channel (context, channel,
+   run_channel (context, channel,
                          read_rmcios, int_rmcios,
                          &returnv,
                          0, (const union param_rmcios) 0);
@@ -1282,7 +1301,8 @@ int read_str (const struct context_rmcios *context,
    else sreturn.size = 0 ;
    sreturn.data = string;
    sreturn.length = 0;
-   context->run_channel (context, channel,
+   sreturn.required_size = 0;  
+   run_channel (context, channel,
                          read_rmcios, buffer_rmcios,
                          &returnv,
                          0, (const union param_rmcios) 0);
@@ -1298,7 +1318,7 @@ float write_f (const struct context_rmcios *context, int channel, float value)
       .num_params = 1,
       .param.fv = &rvalue
    };
-   context->run_channel (context, channel,
+   run_channel (context, channel,
                          write_rmcios, float_rmcios,
                          &returnv,
                          1, (const union param_rmcios) &value);
@@ -1314,7 +1334,7 @@ float write_fv (const struct context_rmcios *context, int channel, int params,
       .num_params = 1,
       .param.fv = &rvalue
    };
-   context->run_channel (context, channel,
+   run_channel (context, channel,
                          write_rmcios, float_rmcios,
                          &returnv,
                          params, (const union param_rmcios) values);
@@ -1330,7 +1350,7 @@ int write_iv (const struct context_rmcios *context, int channel, int params,
       .num_params = 1,
       .param.iv = &rvalue
    };
-   context->run_channel (context, channel,
+   run_channel (context, channel,
                          write_rmcios, int_rmcios,
                          &returnv,
                          params, (const union param_rmcios) values);
@@ -1345,7 +1365,7 @@ int write_i (const struct context_rmcios *context, int channel, int value)
       .num_params = 1,
       .param.iv = &rvalue
    };
-   context->run_channel (context, channel, write_rmcios, int_rmcios,
+   run_channel (context, channel, write_rmcios, int_rmcios,
                          &returnv, 1,
                          (const union param_rmcios) &value);
    return rvalue;
@@ -1369,7 +1389,7 @@ void write_str (const struct context_rmcios *context,
    param.required_size = i;
    param.trailing_size = 1;  // Trailing 0
    
-   context->run_channel (context, channel,
+   run_channel (context, channel,
                          write_rmcios, buffer_rmcios,
                          &returnv,
                          1, (const union param_rmcios) &param);
@@ -1390,7 +1410,7 @@ void write_buffer (const struct context_rmcios *context, int channel,
    param.required_size = length;
    param.trailing_size = 0;
 
-   context->run_channel (context, channel,
+   run_channel (context, channel,
                          write_rmcios, buffer_rmcios,
                          &returnv,
                          1, (const union param_rmcios) &param);
@@ -1419,7 +1439,7 @@ int write_binary (const struct context_rmcios *context,
       .num_params = 1,
       .param.bv = &breturnv
    };
-   context->run_channel (context, channel,
+   run_channel (context, channel,
                          write_rmcios, binary_rmcios,
                          &returnv,
                          1, (const union param_rmcios) &param);
@@ -1429,13 +1449,13 @@ int write_binary (const struct context_rmcios *context,
 
 int linked_channels (const struct context_rmcios *context, int channel)
 {
-   int ireturn;
+   int ireturn = 0;
    struct combo_rmcios returnv = {
       .paramtype = int_rmcios,
       .num_params = 1,
       .param.iv = &ireturn
    };
-   context->run_channel (context, context->link,
+   run_channel (context, context->link,
                          read_rmcios, int_rmcios,
                          &returnv,
                          1, (const union param_rmcios) &channel);
@@ -1456,7 +1476,7 @@ void *allocate_storage (const struct context_rmcios *context, int size,
    param.data = (void *) &size;
    param.length = sizeof (size);
    param.size = 0;
-   void *ptr;
+   void *ptr = 0;
    breturnv.data = (void *) &ptr;
    breturnv.length = 0;
    breturnv.size = sizeof (ptr);
@@ -1464,7 +1484,7 @@ void *allocate_storage (const struct context_rmcios *context, int size,
    if (storage_channel == 0)
       storage_channel = context->mem;
    //return (void *) write_i(storage_channel, size) ;
-   context->run_channel (context, storage_channel,
+   run_channel (context, storage_channel,
                          write_rmcios, binary_rmcios,
                          &returnv,
                          1, (const union param_rmcios) &param);
@@ -1483,7 +1503,7 @@ void free_storage (const struct context_rmcios *context, void *ptr,
    param[1].length = sizeof (ptr);
    if (storage_channel == 0) storage_channel = context->mem;
 
-   context->run_channel (context, storage_channel, write_rmcios,
+   run_channel (context, storage_channel, write_rmcios,
                          binary_rmcios, 0, 2,
                          (const union param_rmcios) param);
 }
@@ -1491,7 +1511,7 @@ void free_storage (const struct context_rmcios *context, void *ptr,
 int channel_enum (const struct context_rmcios *context,
                   const char *channel_name)
 {
-   int ireturn;
+   int ireturn = 0;
    struct buffer_rmcios param;
    struct combo_rmcios returnv = {
       .paramtype = int_rmcios,
@@ -1504,7 +1524,7 @@ int channel_enum (const struct context_rmcios *context,
    for (slen = 0; channel_name[slen] != 0; slen++);     
    param.length = slen;
    param.size = 0;
-   context->run_channel (context, context->id,
+   run_channel (context, context->id,
                          read_rmcios, buffer_rmcios,
                          &returnv,
                          1, (const union param_rmcios) &param);
@@ -1524,7 +1544,7 @@ int channel_name (const struct context_rmcios *context,
       .num_params = 1,
       .param.bv = &breturnv
    };
-   context->run_channel (context, context->name,
+   run_channel (context, context->name,
                          read_rmcios, int_rmcios,
                          &returnv,
                          1, (const union param_rmcios) &channel_id);

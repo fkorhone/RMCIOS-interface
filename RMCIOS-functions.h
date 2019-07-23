@@ -114,6 +114,15 @@ extern "C"
                                class_rmcios channel_function,
                                void *channel_data);
 
+/// @brief run channel
+   void run_channel (const struct context_rmcios * context,
+                     int id,
+                     enum function_rmcios function,
+                     enum type_rmcios paramtype,
+                     struct combo_rmcios *returnv,
+                     int num_params,
+                     const union param_rmcios param);
+
 /// @brief Simplified link function for linking just the channel
 /// 
 /// @param context pointer to target system context
