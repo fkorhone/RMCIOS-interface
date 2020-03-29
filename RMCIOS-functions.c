@@ -477,12 +477,13 @@ void return_buffer (const struct context_rmcios *context,
       break;
    case channel_rmcios:
       {
-         struct buffer_rmcios sreturn;
-         sreturn.length = length;
-         sreturn.size = 0;
-         sreturn.required_size = length;
-         sreturn.trailing_size = 0;
-         sreturn.data = (char *) buffer;
+         struct buffer_rmcios sreturn = {
+             .length = length,
+             .size = 0,
+             .required_size = length,
+             .trailing_size = 0,
+             .data = (char *) buffer
+         };
          run_channel (context, returnv->param.channel, write_rmcios, 
                                  buffer_rmcios, 0, 1, 
                                  (const union param_rmcios) &sreturn) ;       
@@ -538,12 +539,13 @@ void return_binary (const struct context_rmcios *context,
       break;
    case channel_rmcios:
       {
-         struct buffer_rmcios sreturn;
-         sreturn.length = length;
-         sreturn.size = length;
-         sreturn.required_size=length;
-         sreturn.trailing_size=0 ;
-         sreturn.data = (char *) buffer;
+         struct buffer_rmcios sreturn = {
+            .length = length,
+            .size = length,
+            .required_size = length,
+            .trailing_size = 0,
+            .data = (char *) buffer
+         };
          // execute write to return channel
          run_channel (context, returnv->param.channel, write_rmcios, 
                                binary_rmcios, 0, 1, 
@@ -917,15 +919,12 @@ struct buffer_rmcios param_to_buffer (const struct context_rmcios *context,
                                       const union param_rmcios params,
                                       int index, int maxlen, char *to_str)
 {
-   struct buffer_rmcios rbuffer;
-   struct buffer_rmcios p_buffer;
+   struct buffer_rmcios rbuffer = {0};
+   struct buffer_rmcios p_buffer = {0};
    int i;
    int len;
    if (params.p == 0)
    {
-      rbuffer.length = 0;
-      rbuffer.size = 0;
-      rbuffer.data = 0;
       return rbuffer;
    }
    switch (paramtype)
@@ -953,10 +952,9 @@ struct buffer_rmcios param_to_buffer (const struct context_rmcios *context,
       if (maxlen > 0)
       {
          rbuffer.length = i;    // payload size
+         rbuffer.required_size = rbuffer.length;
          rbuffer.size = maxlen;
       }
-      else
-         rbuffer.length = 0;
       return rbuffer;
 
    case buffer_rmcios:
@@ -1000,19 +998,15 @@ struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
                                       const union param_rmcios params,
                                       int index, int maxlen, void *buffer)
 {
-   struct buffer_rmcios rbuffer;
-   struct buffer_rmcios p_buffer;
+   struct buffer_rmcios rbuffer = {0};
+   struct buffer_rmcios p_buffer = {0};
    if (params.p == 0)
    {
-      rbuffer.length = 0;
-      rbuffer.size = 0;
-      rbuffer.data = 0;
       return rbuffer;
    }
    switch (paramtype)
    {
    case float_rmcios:
-      rbuffer.size = 0;
       rbuffer.length = sizeof (float);
       rbuffer.data = (char *) &(params.fv[index]);
       if (maxlen >= sizeof (float))
@@ -1020,7 +1014,6 @@ struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
       return rbuffer;
 
    case int_rmcios:
-      rbuffer.size = 0;
       rbuffer.length = sizeof (int);
       rbuffer.data = (char *) &(params.iv[index]);
       if (maxlen >= sizeof (int))
@@ -1054,9 +1047,6 @@ struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
       }
       break;
    }
-   rbuffer.length = 0;
-   rbuffer.size = 0;
-   rbuffer.data = 0;
    return rbuffer;
 }
 
@@ -1075,7 +1065,7 @@ int param_to_function (const struct context_rmcios *context,
       int blen = param_buffer_alloc_size (context, paramtype, param, index);
       {
          char buffer[blen];
-         struct buffer_rmcios fname;
+         struct buffer_rmcios fname = {0};
          fname = param_to_buffer (context, paramtype, 
                                   param, index, 
                                   blen, buffer);
@@ -1290,7 +1280,7 @@ int read_i (const struct context_rmcios *context, int channel)
 int read_str (const struct context_rmcios *context,
                int channel, char *string, int maxlen)
 {
-   struct buffer_rmcios sreturn;
+   struct buffer_rmcios sreturn = {0};
    struct combo_rmcios returnv = {
       .paramtype = buffer_rmcios,
       .num_params = 1,
@@ -1374,7 +1364,7 @@ int write_i (const struct context_rmcios *context, int channel, int value)
 void write_str (const struct context_rmcios *context,
                 int channel, const char *str, int channel_id)
 {
-   struct buffer_rmcios param;
+   struct buffer_rmcios param = {0};
    struct combo_rmcios returnv = {
       .paramtype = channel_rmcios,
       .num_params = 1,
@@ -1398,18 +1388,18 @@ void write_str (const struct context_rmcios *context,
 void write_buffer (const struct context_rmcios *context, int channel,
                    const char *buffer, int length, int channel_id)
 {
-   struct buffer_rmcios param;
+   struct buffer_rmcios param = {
+      .data = (char *) buffer,
+      .length = length,
+      .size = 0,
+      .required_size = length,
+      .trailing_size = 0
+   };
    struct combo_rmcios returnv = {
       .paramtype = channel_rmcios,
       .num_params = 1,
       .param.channel = channel_id,
    };
-   param.data = (char *) buffer;
-   param.length = length;   
-   param.size = 0;
-   param.required_size = length;
-   param.trailing_size = 0;
-
    run_channel (context, channel,
                          write_rmcios, buffer_rmcios,
                          &returnv,
@@ -1466,16 +1456,19 @@ void *allocate_storage (const struct context_rmcios *context, int size,
                         int storage_channel)
 {
 
-   struct buffer_rmcios breturnv;
+   struct buffer_rmcios breturnv = {0};
    struct combo_rmcios returnv = {
       .paramtype = buffer_rmcios,
       .num_params = 1,
       .param.bv = &breturnv
    };
-   struct buffer_rmcios param;
-   param.data = (void *) &size;
-   param.length = sizeof (size);
-   param.size = 0;
+   struct buffer_rmcios param = {
+      .data = (void *) &size,
+      .length = sizeof (size),
+      .size = 0,
+      .required_size = sizeof (size),  
+      .trailing_size = 0
+   };
    void *ptr = 0;
    breturnv.data = (void *) &ptr;
    breturnv.length = 0;
@@ -1494,13 +1487,10 @@ void *allocate_storage (const struct context_rmcios *context, int size,
 void free_storage (const struct context_rmcios *context, void *ptr,
                    int storage_channel)
 {
-   struct buffer_rmcios param[2];
-   param[0].data = 0;
-   param[0].size = 0;
-   param[0].length = 0;
+   struct buffer_rmcios param[2] = {0};
    param[1].data = (char *) &ptr;
-   param[1].size = 0;
    param[1].length = sizeof (ptr);
+   param[1].required_size = sizeof (ptr);
    if (storage_channel == 0) storage_channel = context->mem;
 
    run_channel (context, storage_channel, write_rmcios,
@@ -1523,7 +1513,9 @@ int channel_enum (const struct context_rmcios *context,
    // strlen(channel_name) :
    for (slen = 0; channel_name[slen] != 0; slen++);     
    param.length = slen;
+   param.required_size = slen;
    param.size = 0;
+   param.trailing_size = 0;
    run_channel (context, context->id,
                          read_rmcios, buffer_rmcios,
                          &returnv,
@@ -1537,7 +1529,9 @@ int channel_name (const struct context_rmcios *context,
    struct buffer_rmcios breturnv = {
       .data = name_to,
       .length = 0,
-      .size = maxlen
+      .size = maxlen,
+      .required_size = 0,
+      .trailing_size = 0
    };
    struct combo_rmcios returnv = {
       .paramtype = buffer_rmcios,
@@ -1559,9 +1553,7 @@ struct buffer_rmcios make_str_as_const_buffer (const char *str)
    // get length of string
    for (i = 0; str[i] != 0; i++);       
    pb.data = (char *) str;
-   // size of payload
    pb.length = i;       
-   // writable size
    pb.size = 0; 
    pb.required_size = i;
    pb.trailing_size = 1;
@@ -1570,14 +1562,13 @@ struct buffer_rmcios make_str_as_const_buffer (const char *str)
 
 struct buffer_rmcios make_const_buffer (const char *buffer, int length)
 {
-   struct buffer_rmcios pb;
-   pb.data = (char *) buffer;
-   // size of payload
-   pb.length = length;  
-   // writable size
-   pb.size = 0; 
-   pb.required_size = length;
-   pb.trailing_size = 0;
+   struct buffer_rmcios pb = {
+     .data = (char *) buffer,
+     .length = length,
+     .size = 0,
+     .required_size = length,
+     .trailing_size = 0
+   };
    return pb;
 }
 
@@ -1589,9 +1580,7 @@ struct buffer_rmcios make_str_as_buffer (char *str, int size)
    // get length of string
    for (i = 0; str[i] != 0; i++);       
    pb.data = (char *) str;
-   // size of payload
    pb.length = i;       
-   // writable size
    pb.size = size; 
    pb.required_size = i;
    pb.trailing_size = 0;
@@ -1602,9 +1591,7 @@ struct buffer_rmcios make_buffer (char *buffer, int length)
 {
    struct buffer_rmcios pb;
    pb.data = (char *) buffer;
-   // size of payload
    pb.length = length;  
-   // writable size
    pb.size = length;    
    pb.required_size = length;
    pb.trailing_size = 0;
