@@ -965,12 +965,13 @@ struct buffer_rmcios param_to_buffer (const struct context_rmcios *context,
       int length;
       length = copy_mem_safe (p_buffer.data, p_buffer.length, to_str, maxlen);       
       if (length < maxlen)
+      {
          // add extra NULL terminator for string compatibility
          to_str[length] = 0;    
+      }
 
-
-         // Return the orginal parameter data
-         return params.bv[index];       
+      // Return the orginal parameter data
+      return params.bv[index];       
    case combo_rmcios:
       {
          struct combo_rmcios *p = params.cv;
