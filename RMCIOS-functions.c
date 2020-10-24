@@ -636,104 +636,68 @@ int param_binary_length (const struct context_rmcios *context,
                          enum type_rmcios paramtype,
                          const union param_rmcios param, int index)
 {
-   struct buffer_rmcios p_buffer = param.bv[index];
-   switch (paramtype)
-   {
-   case float_rmcios:
-      return sizeof (float);
-   case int_rmcios:
-      return sizeof (int);
-   case buffer_rmcios:
-   case binary_rmcios:
-      return p_buffer.length;
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = param.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         return param_binary_length (context, p->paramtype, p->param, index);
-      }
-   }
-   return 0;
+   struct buffer_rmcios existing_buffer = {0} ;
+   struct combo_rmcios returnv = {
+      .paramtype = binary_rmcios,
+      .num_params = 1,
+      .param.bv = &existing_buffer
+   };
+   // Get required length for the parameter
+   // context.convert read command fills the given structure with required size parameter
+   returnv.param.bv = &existing_buffer;
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   return existing_buffer.required_size;
 }
 
 int param_string_alloc_size (const struct context_rmcios *context,
                              enum type_rmcios paramtype,
                              const union param_rmcios param, int index)
 {
-   struct buffer_rmcios p_buffer = param.bv[index];
-   int len;
-   switch (paramtype)
+   int needed_size = 0; 
+   struct buffer_rmcios existing_buffer = {0} ;
+   struct combo_rmcios returnv = {
+      .paramtype = buffer_rmcios,
+      .num_params = 1,
+      .param.bv = &existing_buffer
+   };
+   // Get required length for the parameter
+   // context.convert read command fills the given structure with required size parameter
+   returnv.param.bv = &existing_buffer;
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   if(existing_buffer.data != 0 && existing_buffer.trailing_size > 0 && existing_buffer.data[length] == 0)
    {
-   case float_rmcios:
-   case int_rmcios:
-      return 20;
-   case buffer_rmcios:
-   case binary_rmcios:
-      if (p_buffer.trailing_size > 0 && p_buffer.data[p_buffer.length] == 0)
-         // check if buffer contains null-terminated string
-      {
-         return 0;
-         // Buffer contains NULL-terminator after payload -> no need to allocate
-      }
-      // strlen :
-      for (len = 0; len < p_buffer.length && p_buffer.data[len] != 0; len++);  
-      // need to allocate strlen+1
-      return len + 1;   
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = param.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         return param_string_alloc_size (context, p->paramtype, p->param,
-                                         index);
-      }
-
+      needed_size = 0;
    }
-   return 0;
+   else
+   {
+      needed_size = existing_buffer.required_size + 1;
+   }
 }
 
 int param_buffer_alloc_size (const struct context_rmcios *context,
                              enum type_rmcios paramtype,
                              const union param_rmcios param, int index)
 {
-   switch (paramtype)
+   int needed_size = 0; 
+   struct buffer_rmcios existing_buffer = {0} ;
+   struct combo_rmcios returnv = {
+      .paramtype = buffer_rmcios,
+      .num_params = 1,
+      .param.bv = &existing_buffer
+   };
+   // Get required length for the parameter
+   // context.convert read command fills the given structure with required size parameter
+   returnv.param.bv = &existing_buffer;
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   if(existing_buffer.data != 0 && existing_buffer.required_size == existing_buffer.length )
    {
-   case float_rmcios:
-   case int_rmcios:
-      return 20;
-   case buffer_rmcios:
-   case binary_rmcios:
-         return 0 ; // No need to allocate any memory
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = param.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         return param_buffer_alloc_size (context, p->paramtype, p->param,
-                                         index);
-      }
+      needed_size = 0;
    }
-
-   return 0;
+   else
+   {
+      needed_size = existing_buffer.required_size;
+   }
+   return needed_size;
 }
 
 float read_f (const struct context_rmcios *context, int channel)
