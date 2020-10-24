@@ -28,7 +28,6 @@ along with RMCIOS.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "RMCIOS-functions.h"
-#include "string-conversion.h"
 
 // ****************************************************************
 // Channel system implementation:
@@ -254,7 +253,8 @@ void return_int (const struct context_rmcios *context,
    {
       return;
    }
-   run_channel (context, context.convert, returnv, write_rmcios, int_rmcios, returnv, 1, &value);
+   run_channel (context, context->convert, write_rmcios, int_rmcios, returnv,
+                1, (const union param_rmcios)(&value));
 }
 
 void return_float (const struct context_rmcios *context,
@@ -264,30 +264,37 @@ void return_float (const struct context_rmcios *context,
    {
       return;
    }
-   run_channel (context, context.convert, returnv, write_rmcios, float_rmcios, returnv, 1, &value);
+   run_channel (context, context->convert, write_rmcios, float_rmcios, returnv,
+                1, (const union param_rmcios)(&value));
 }
 
 void return_string (const struct context_rmcios *context,
                     struct combo_rmcios *returnv, const char *string)
 {
-   int i;
-   for (i = 0; string[i] != 0; i++);  
+   int length;
+   for (length = 0; string[length] != 0; length++);  
    
-   struct buffer_rmcios = {
-      .data = string,
-      .length= i,
+   struct buffer_rmcios value = {
+      .data = (char *)string, // Treated as const when size = 0
+      .length = length,
       .size = 0,
       .required_size = length,
       .trailing_size = 1
    };
+   if (returnv == 0 || returnv->num_params == 0)
+   {
+      return;
+   }
+   run_channel (context, context->convert, write_rmcios, buffer_rmcios, returnv,
+                1, (const union param_rmcios)(&value));
 }
 
 void return_buffer (const struct context_rmcios *context,
                     struct combo_rmcios *returnv,
                     const char *buffer, unsigned int length)
 {
-   struct buffer_rmcios = {
-      .data = buffer,
+   struct buffer_rmcios value = {
+      .data = (char *)buffer, // Treated as const when size = 0
       .length= length,
       .size = 0,
       .required_size = length,
@@ -298,15 +305,16 @@ void return_buffer (const struct context_rmcios *context,
    {
       return;
    }
-   run_channel (context, context.convert, returnv, write_rmcios, buffer_rmcios, returnv, 1, &value);
+   run_channel (context, context->convert, write_rmcios, buffer_rmcios, returnv, 
+                1, (const union param_rmcios)(&value));
 }
 
 void return_binary (const struct context_rmcios *context,
                     struct combo_rmcios *returnv,
                     const char *buffer, unsigned int length)
 {
-   struct buffer_rmcios = {
-      .data = buffer,
+   struct buffer_rmcios value = {
+      .data = (char *)buffer, // Treated as const when size = 0
       .length= length,
       .size = 0,
       .required_size = length,
@@ -317,7 +325,8 @@ void return_binary (const struct context_rmcios *context,
    {
       return;
    }
-   run_channel (context, context.convert, returnv, write_rmcios, binary_rmcios, returnv, 1, &value);
+   run_channel (context, context->convert, write_rmcios, binary_rmcios, returnv, 
+                1,(const union param_rmcios)(&value));
 }
 
 void return_void (const struct context_rmcios *context,
@@ -346,7 +355,6 @@ float param_to_float (const struct context_rmcios *context,
                       const union param_rmcios params, int index)
 {
    float retfloat = 0.0 / 0.0;   // NAN
-   int len;
    if (params.p == 0)
    {
       return retfloat;
@@ -354,11 +362,11 @@ float param_to_float (const struct context_rmcios *context,
    struct combo_rmcios returnv = {
         .paramtype = float_rmcios,
         .num_params = 1,
-        .param = &retfloat,
+        .param = {&retfloat},
         .next = 0
-   }
+   };
 
-   run_channel (context, context.convert, returnv, read_rmcios, paramtype, returnv, index + 1, params);
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
    return retfloat;   
 }
 
@@ -367,7 +375,6 @@ int param_to_integer (const struct context_rmcios *context,
                       const union param_rmcios params, int index)
 {
    int retint = 0;
-   int len;
    if (params.cp == 0)
    {
       return retint;
@@ -375,10 +382,10 @@ int param_to_integer (const struct context_rmcios *context,
    struct combo_rmcios returnv = {
         .paramtype = int_rmcios,
         .num_params = 1,
-        .param = &retint,
+        .param = {&retint},
         .next = 0
-   }
-   run_channel (context, context.convert, returnv, read_rmcios, paramtype, returnv, index + 1, params);
+   };
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
    return retint;
 }
 
@@ -443,24 +450,30 @@ const char *param_to_string (const struct context_rmcios *context,
     const char *sreturn = "";
     struct buffer_rmcios breturn =
     {
-        .data=to_str
-        .length = 0;
-        .size = maxlen;
-        .required_size = 0;
-        .trailing_size = 0;
-    } ;
+        .data = to_str,
+        .length = 0,
+        .size = maxlen,
+        .required_size = 0,
+        .trailing_size = 0
+    };
    
-   struct combo_rmcios returnv = {
+   struct combo_rmcios copy_to = {
       .paramtype = buffer_rmcios,
       .num_params = 1,
-      .param.bv = &breturn
+      .param = {&breturn}
    };
+
    struct buffer_rmcios existing_buffer = {0} ;
+   struct combo_rmcios fetch_to = {
+      .paramtype = buffer_rmcios,
+      .num_params = 1,
+      .param = {&existing_buffer}
+   };
 
    if (maxlen > 0)
    {
       // Copy data to user buffer:
-      run_channel (context, context->convert, write_rmcios, paramtype, &returnv, index + 1, params);
+      run_channel (context, context->convert, write_rmcios, paramtype, &copy_to, index + 1, params);
       
       // Ensure trailing null:
       if (breturn.length >= breturn.size)
@@ -477,9 +490,8 @@ const char *param_to_string (const struct context_rmcios *context,
    
    // Check if parameter is already string compatible buffer.
    // context.convert read command fills the given structure with original buffer data (if exists)
-   returnv.param.bv = &existing_buffer;
-   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
-   if(existing_buffer.data != 0 && existing_buffer.trailing_size > 0 && existing_buffer.data[length] == 0)
+   run_channel (context, context->convert, read_rmcios, paramtype, &fetch_to, index + 1, params);
+   if (existing_buffer.data != 0 && existing_buffer.trailing_size > 0 && existing_buffer.data[existing_buffer.length] == 0)
    {
       sreturn = existing_buffer.data;
    }
@@ -491,33 +503,36 @@ struct buffer_rmcios param_to_buffer (const struct context_rmcios *context,
                                       const union param_rmcios params,
                                       int index, int maxlen, char *buffer)
 {
-    const char *sreturn = "";
-    struct buffer_rmcios breturn =
-    {
-        .data=buffer
-        .length = 0;
-        .size = maxlen;
-        .required_size = 0;
-        .trailing_size = 0;
-    } ;
-   
-   struct combo_rmcios returnv = {
+   struct buffer_rmcios breturn =
+   {
+        .data = buffer,
+        .length = 0,
+        .size = maxlen,
+        .required_size = 0,
+        .trailing_size = 0
+   };
+   struct combo_rmcios copy_to = {
       .paramtype = buffer_rmcios,
       .num_params = 1,
-      .param.bv = &breturn
+      .param = {&breturn}
    };
+
    struct buffer_rmcios existing_buffer = {0};
+   struct combo_rmcios fetch_to = {
+      .paramtype = buffer_rmcios,
+      .num_params = 1,
+      .param = {&existing_buffer}
+   };
 
    if (maxlen > 0)
    {
       // Copy data to user buffer:
-      run_channel (context, context->convert, write_rmcios, paramtype, &returnv, index + 1, params);
+      run_channel (context, context->convert, write_rmcios, paramtype, &copy_to, index + 1, params);
    }
    
    // Check if parameter is already buffer.
    // context.convert read command fills the given structure with original buffer data (if exists)
-   returnv.param.bv = &existing_buffer;
-   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   run_channel (context, context->convert, read_rmcios, paramtype, &fetch_to, index + 1, params);
 
    if(existing_buffer.data != 0 )
    {
@@ -534,33 +549,36 @@ struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
                                       const union param_rmcios params,
                                       int index, int maxlen, void *buffer)
 {
-    const char *sreturn = "";
-    struct buffer_rmcios breturn =
-    {
-        .data=to_str
-        .length = 0;
-        .size = maxlen;
-        .required_size = 0;
-        .trailing_size = 0;
-    } ;
-   
-   struct combo_rmcios returnv = {
+   struct buffer_rmcios breturn =
+   {
+        .data = buffer,
+        .length = 0,
+        .size = maxlen,
+        .required_size = 0,
+        .trailing_size = 0
+   };
+   struct combo_rmcios copy_to= {
       .paramtype = binary_rmcios,
       .num_params = 1,
-      .param.bv = &breturn
+      .param = {&breturn}
    };
+   
    struct buffer_rmcios existing_buffer = {0};
+   struct combo_rmcios fetch_to= {
+      .paramtype = binary_rmcios,
+      .num_params = 1,
+      .param = {&existing_buffer}
+   };
 
    if (maxlen > 0)
    {
       // Copy data to user buffer:
-      run_channel (context, context->convert, write_rmcios, paramtype, &returnv, index + 1, params);
+      run_channel (context, context->convert, write_rmcios, paramtype, &copy_to, index + 1, params);
    }
    
    // Check if parameter is already buffer.
    // context.convert read command fills the given structure with original buffer data (if exists)
-   returnv.param.bv = &existing_buffer;
-   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   run_channel (context, context->convert, read_rmcios, paramtype, &fetch_to, index + 1, params);
 
    if(existing_buffer.data != 0 )
    {
@@ -606,12 +624,11 @@ int param_string_length (const struct context_rmcios *context,
    struct combo_rmcios returnv = {
       .paramtype = buffer_rmcios,
       .num_params = 1,
-      .param.bv = &existing_buffer
+      .param = {&existing_buffer}
    };
    // Get required length for the parameter
    // context.convert read command fills the given structure with required size parameter
-   returnv.param.bv = &existing_buffer;
-   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, param);
    return existing_buffer.required_size + 1;
 }
 
@@ -623,12 +640,11 @@ int param_buffer_length (const struct context_rmcios *context,
    struct combo_rmcios returnv = {
       .paramtype = buffer_rmcios,
       .num_params = 1,
-      .param.bv = &existing_buffer
+      .param = {&existing_buffer}
    };
    // Get required length for the parameter
    // context.convert read command fills the given structure with required size parameter
-   returnv.param.bv = &existing_buffer;
-   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, param);
    return existing_buffer.required_size;
 }
 
@@ -640,12 +656,11 @@ int param_binary_length (const struct context_rmcios *context,
    struct combo_rmcios returnv = {
       .paramtype = binary_rmcios,
       .num_params = 1,
-      .param.bv = &existing_buffer
+      .param= {&existing_buffer}
    };
    // Get required length for the parameter
    // context.convert read command fills the given structure with required size parameter
-   returnv.param.bv = &existing_buffer;
-   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, param);
    return existing_buffer.required_size;
 }
 
@@ -658,13 +673,12 @@ int param_string_alloc_size (const struct context_rmcios *context,
    struct combo_rmcios returnv = {
       .paramtype = buffer_rmcios,
       .num_params = 1,
-      .param.bv = &existing_buffer
+      .param = {&existing_buffer}
    };
    // Get required length for the parameter
    // context.convert read command fills the given structure with required size parameter
-   returnv.param.bv = &existing_buffer;
-   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
-   if(existing_buffer.data != 0 && existing_buffer.trailing_size > 0 && existing_buffer.data[length] == 0)
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, param);
+   if(existing_buffer.data != 0 && existing_buffer.trailing_size > 0 && existing_buffer.data[existing_buffer.length] == 0)
    {
       needed_size = 0;
    }
@@ -672,6 +686,7 @@ int param_string_alloc_size (const struct context_rmcios *context,
    {
       needed_size = existing_buffer.required_size + 1;
    }
+   return needed_size;
 }
 
 int param_buffer_alloc_size (const struct context_rmcios *context,
@@ -683,12 +698,11 @@ int param_buffer_alloc_size (const struct context_rmcios *context,
    struct combo_rmcios returnv = {
       .paramtype = buffer_rmcios,
       .num_params = 1,
-      .param.bv = &existing_buffer
+      .param = {&existing_buffer}
    };
    // Get required length for the parameter
    // context.convert read command fills the given structure with required size parameter
-   returnv.param.bv = &existing_buffer;
-   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, param);
    if(existing_buffer.data != 0 && existing_buffer.required_size == existing_buffer.length )
    {
       needed_size = 0;
