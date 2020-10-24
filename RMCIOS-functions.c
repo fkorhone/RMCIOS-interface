@@ -602,67 +602,34 @@ int param_string_length (const struct context_rmcios *context,
                          enum type_rmcios paramtype,
                          const union param_rmcios param, int index)
 {
-   struct buffer_rmcios p_buffer = param.bv[index];
-   int len;
-   switch (paramtype)
-   {
-   case float_rmcios:
-      return float_to_string (0, 0, param.fv[index]);
-   case int_rmcios:
-      return integer_to_string (0, 0, param.iv[index]);
-   case buffer_rmcios:
-   case binary_rmcios:
-      for (len = 0; len < p_buffer.length && p_buffer.data[len] != 0; len++);
-      // Return actual string length (in characters)
-      return len;       
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = param.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         return param_string_length (context, p->paramtype, p->param, index);
-      }
-      break;
-   }
-   return 0;
+   struct buffer_rmcios existing_buffer = {0} ;
+   struct combo_rmcios returnv = {
+      .paramtype = buffer_rmcios,
+      .num_params = 1,
+      .param.bv = &existing_buffer
+   };
+   // Get required length for the parameter
+   // context.convert read command fills the given structure with required size parameter
+   returnv.param.bv = &existing_buffer;
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   return existing_buffer.required_size + 1;
 }
 
 int param_buffer_length (const struct context_rmcios *context,
                          enum type_rmcios paramtype,
                          const union param_rmcios param, int index)
 {
-   struct buffer_rmcios p_buffer = param.bv[index];
-   switch (paramtype)
-   {
-   case float_rmcios:
-      return float_to_string (0, 0, param.fv[index]);
-   case int_rmcios:
-      return integer_to_string (0, 0, param.iv[index]);
-   case buffer_rmcios:
-   case binary_rmcios:
-      // Return actual buffer length
-      return p_buffer.length;   
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = param.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         return param_buffer_length (context, p->paramtype, p->param, index);
-      }
-   }
-   return 0;
+   struct buffer_rmcios existing_buffer = {0} ;
+   struct combo_rmcios returnv = {
+      .paramtype = buffer_rmcios,
+      .num_params = 1,
+      .param.bv = &existing_buffer
+   };
+   // Get required length for the parameter
+   // context.convert read command fills the given structure with required size parameter
+   returnv.param.bv = &existing_buffer;
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   return existing_buffer.required_size;
 }
 
 int param_binary_length (const struct context_rmcios *context,
