@@ -254,54 +254,7 @@ void return_int (const struct context_rmcios *context,
    {
       return;
    }
-   switch (returnv->paramtype)
-   {
-   case float_rmcios:
-      returnv->param.fv[0] = value;
-      break;
-   case int_rmcios:
-      returnv->param.iv[0] = value;
-      break;
-   case channel_rmcios:
-      run_channel (context, returnv->param.channel, write_rmcios,
-                            int_rmcios, 0, 1,
-                            (const union param_rmcios) &value);
-      break;
-   case buffer_rmcios:
-      {
-         struct buffer_rmcios *sreturn = returnv->param.bv;
-         int n = sreturn->size - sreturn->length;
-         int rsize; 
-         if (n > 0)
-         {
-            char *end = sreturn->data + sreturn->length ;
-            rsize= integer_to_string (end, n, value) ;
-            for (n = 0; end[n] != 0; n++);
-            sreturn->length += n;
-         }
-         else rsize=integer_to_string(0,0,value) ;
-         sreturn->required_size = rsize;
-         sreturn->trailing_size = 1 ;
-         break;
-      }
-   case binary_rmcios:
-      {
-         struct buffer_rmcios *sreturn = returnv->param.bv;
-         if ((sreturn->size - sreturn->length) >= sizeof (value))
-         {
-            *((int *) (sreturn->data + sreturn->length)) = value;
-            sreturn->length += sizeof (value);
-         }
-         sreturn->required_size = sizeof (value);
-      }
-      break;
-   case combo_rmcios:
-      {
-         struct combo_rmcios *creturn = returnv->param.cv;
-         return return_int (context, creturn, value);
-      }
-      break;
-   }
+   run_channel (context, context.convert, returnv, write_rmcios, int_rmcios, returnv, 1, &value);
 }
 
 void return_float (const struct context_rmcios *context,
@@ -311,268 +264,60 @@ void return_float (const struct context_rmcios *context,
    {
       return;
    }
-   switch (returnv->paramtype)
-   {
-   case float_rmcios:
-      returnv->param.fv[0] = value;
-      break;
-   case int_rmcios:
-      returnv->param.iv[0] = value;
-      break;
-   case channel_rmcios:
-      run_channel (context, returnv->param.channel, write_rmcios,
-                   float_rmcios, 0, 1,
-                   (const union param_rmcios) &value);
-      break;
-   case buffer_rmcios:
-      {
-         struct buffer_rmcios *sreturn = returnv->param.bv;
-         int n = sreturn->size - sreturn->length;
-         int rsize ;
-         if (n > 0)
-         {
-            char *end = sreturn->data + sreturn->length;
-            rsize=float_to_string (sreturn->data + sreturn->length, n, value);
-            for (n = 0; end[n] != 0; n++);
-            sreturn->length += n;
-         }
-         else rsize=float_to_string(0,0,value) ;
-
-         sreturn->required_size = rsize ;
-         // Tell that is space for terminating null after data.
-         sreturn->trailing_size = 1 ;
-      }
-      break;
-
-   case binary_rmcios:
-      {
-         struct buffer_rmcios *sreturn = returnv->param.bv;
-         if ((sreturn->size - sreturn->length) > sizeof (value))
-         {
-            *((float *) (sreturn->data + sreturn->length)) = value;
-            sreturn->length += sizeof (value);
-         }
-         sreturn->required_size = sizeof (value);
-      }
-      break;
-   case combo_rmcios:
-      {
-         struct combo_rmcios *creturn = returnv->param.cv;
-         return return_float (context, creturn, value);
-      }
-      break;
-   }
+   run_channel (context, context.convert, returnv, write_rmcios, float_rmcios, returnv, 1, &value);
 }
 
 void return_string (const struct context_rmcios *context,
                     struct combo_rmcios *returnv, const char *string)
 {
-   int i = 0, si = -1;
-
-   if (returnv == 0 || returnv->num_params == 0)
-   {
-      return;
-   }
-   switch (returnv->paramtype)
-   {
-   case float_rmcios:
-      returnv->param.fv[0] = string_to_float (string);
-      break;
-   case int_rmcios:
-      returnv->param.iv[0] = string_to_integer (string);
-      break;
-   case channel_rmcios:
-      {
-         struct buffer_rmcios send_buff;
-         send_buff.data = (char *) string;
-         // get length of string
-         for (i = 0; string[i] != 0; i++);      
-         // payload length:
-         send_buff.length = i;  
-         // size includes the NULL terminator
-         send_buff.size = i + 1;        
-         // required size is size of data
-         send_buff.required_size = i;
-         // There is a trailing terminating zero
-         send_buff.trailing_size = 1 ;   
-         run_channel (context, returnv->param.channel, write_rmcios,
-                               buffer_rmcios, 0, 1,
-                               (const union param_rmcios) &send_buff);
-      }
-      break;
-   case buffer_rmcios: // copy data to buffer
-   case binary_rmcios:
-      {
-         struct buffer_rmcios *sreturn = returnv->param.bv;
-         for (i = sreturn->length; i < sreturn->size; i++)
-         {
-            // append string (include terminating zero character)
-            sreturn->data[i] = string[++si];       
-            if (string[si] == 0)
-               break;      // end of string 
-         }
-         if (si < 0) si = 0;
-         if (string[si] != 0)
-         {
-            while (string[++si] != 0);
-         }
-         // Required size is complete size of data without terminating zero.
-         sreturn->required_size = si ;
-         if(si < sreturn->size )
-            // String fit in the buffer
-         {
-            // Length is size of data excluding terminating zero
-            sreturn->length = i-1;
-            // Terminating zero is marked as trailing character after the data
-            sreturn->trailing_size = 1 ;
-         }
-         else 
-            // String did not fit completely in the buffer.
-         {
-            // Length is the ammount of data that fit in the buffer
-            sreturn->length = i ;
-            // There is no space for terminating zero:
-            sreturn->trailing_size = 0 ;
-         }
-      }
-      break;
-   case combo_rmcios:
-      {
-         struct combo_rmcios *creturn = returnv->param.cv;
-         return return_string (context, creturn, string);
-      }
-      break;
-   }
+   int i;
+   for (i = 0; string[i] != 0; i++);  
+   
+   struct buffer_rmcios = {
+      .data = string,
+      .length= i,
+      .size = 0,
+      .required_size = length,
+      .trailing_size = 1
+   };
 }
 
 void return_buffer (const struct context_rmcios *context,
                     struct combo_rmcios *returnv,
                     const char *buffer, unsigned int length)
 {
-   int i = 0, si = 0;
+   struct buffer_rmcios = {
+      .data = buffer,
+      .length= length,
+      .size = 0,
+      .required_size = length,
+      .trailing_size = 0
+   };
 
    if (returnv == 0 || returnv->num_params == 0)
    {
       return;
    }
-   switch (returnv->paramtype)
-   {
-   case float_rmcios:
-      {
-         char string[length + 1];
-         for (i = 0; i < length; i++)
-            string[i] = buffer[i];
-         string[length] = 0;
-         returnv->param.fv[0] = string_to_float (string);
-      }
-      break;
-   case int_rmcios:
-      {
-         char string[length + 1];
-         for (i = 0; i < length; i++)
-            string[i] = buffer[i];
-         string[length] = 0;
-         returnv->param.iv[0] = string_to_integer (string);
-      }
-      break;
-   case channel_rmcios:
-      {
-         struct buffer_rmcios sreturn = {
-             .length = length,
-             .size = 0,
-             .required_size = length,
-             .trailing_size = 0,
-             .data = (char *) buffer
-         };
-         run_channel (context, returnv->param.channel, write_rmcios, 
-                                 buffer_rmcios, 0, 1, 
-                                 (const union param_rmcios) &sreturn) ;       
-      }
-      break;
-   case buffer_rmcios:
-   case binary_rmcios:
-      {
-         struct buffer_rmcios *sreturn = returnv->param.bv;
-         for (i = sreturn->length; i < sreturn->size && si < length; i++)
-         {
-            // append data to buffer
-            sreturn->data[i] = buffer[si++];    
-         }
-         sreturn->length = i;
-         sreturn->trailing_size = 0;
-         sreturn->required_size = length;
-      }
-      break;
-   case combo_rmcios:
-      {
-         struct combo_rmcios *creturn = returnv->param.cv;
-         return return_buffer (context, creturn, buffer, length);
-      }
-      break;
-   }
+   run_channel (context, context.convert, returnv, write_rmcios, buffer_rmcios, returnv, 1, &value);
 }
 
 void return_binary (const struct context_rmcios *context,
                     struct combo_rmcios *returnv,
                     const char *buffer, unsigned int length)
 {
-   int i = 0, si = 0;
+   struct buffer_rmcios = {
+      .data = buffer,
+      .length= length,
+      .size = 0,
+      .required_size = length,
+      .trailing_size = 0
+   };
+
    if (returnv == 0 || returnv->num_params == 0)
    {
       return;
    }
-   switch (returnv->paramtype)
-   {
-   case float_rmcios:
-      {
-         char *d = (char *) returnv->param.p;
-         for (i = 0; i < sizeof (float) && i < length; i++)
-            d[i] = buffer[i];
-      }
-      break;
-   case int_rmcios:
-      {
-         char *d = (char *) returnv->param.p;
-         for (i = 0; i < sizeof (int) && i < length; i++)
-            d[i] = buffer[i];
-      }
-      break;
-   case channel_rmcios:
-      {
-         struct buffer_rmcios sreturn = {
-            .length = length,
-            .size = length,
-            .required_size = length,
-            .trailing_size = 0,
-            .data = (char *) buffer
-         };
-         // execute write to return channel
-         run_channel (context, returnv->param.channel, write_rmcios, 
-                               binary_rmcios, 0, 1, 
-                               (const union param_rmcios) &sreturn);        
-      }
-      break;
-   case buffer_rmcios:
-   case binary_rmcios:
-      {
-         struct buffer_rmcios *sreturn = returnv->param.bv;
-         for (i = sreturn->length; i < sreturn->size && si < length; i++)
-         {
-            // append data to buffer
-            sreturn->data[i] = buffer[si++];    
-         }
-         sreturn->length = i;
-         sreturn->required_size = length;
-         sreturn->trailing_size = 0;
-      }
-      break;
-   case combo_rmcios:
-      {
-         struct combo_rmcios *creturn = returnv->param.cv;
-         return return_binary (context, creturn, buffer, length);
-      }
-      break;
-   }
+   run_channel (context, context.convert, returnv, write_rmcios, binary_rmcios, returnv, 1, &value);
 }
 
 void return_void (const struct context_rmcios *context,
@@ -600,225 +345,71 @@ float param_to_float (const struct context_rmcios *context,
                       enum type_rmcios paramtype,
                       const union param_rmcios params, int index)
 {
-   float returnv = 0.0 / 0.0;   // NAN
+   float retfloat = 0.0 / 0.0;   // NAN
    int len;
    if (params.p == 0)
    {
-      return returnv;
+      return retfloat;
    }
-   
-   switch (paramtype)
-   {
-   case float_rmcios:
-      returnv = params.fv[index];
-      break;
-   case int_rmcios:
-      returnv = params.iv[index];
-      break;
-   case buffer_rmcios:
-      // get space needed for string
-      len = param_string_alloc_size (context, paramtype, params, index);        
-      {
-         // allocate space for string
-         char buffer[len];      
-         const char *s;
-         // convert to string
-         s = param_to_string (context, paramtype, params, index, len, buffer);  
-         returnv = string_to_float (s);
-      }
-      break;
-   case binary_rmcios:
-      {
-         struct buffer_rmcios p = params.bv[index];
-         char *d = (char *) &returnv;
-         int i;
-         for (i = 0; i < sizeof (returnv) && i < p.length; i++)
-         {
-            d[i] = p.data[i];
-         }
-      }
-      break;
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = params.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         param_to_float (context, p->paramtype, p->param, index);
-      }
-      break;
+   struct combo_rmcios returnv = {
+        .paramtype = float_rmcios,
+        .num_params = 1,
+        .param = &retfloat,
+        .next = 0
    }
-   return returnv;
+
+   run_channel (context, context.convert, returnv, read_rmcios, paramtype, returnv, index + 1, params);
+   return retfloat;   
 }
 
 int param_to_integer (const struct context_rmcios *context,
                       enum type_rmcios paramtype,
                       const union param_rmcios params, int index)
 {
-   int returnv = 0;
+   int retint = 0;
    int len;
    if (params.cp == 0)
-      return returnv;
-   switch (paramtype)
    {
-   case float_rmcios:
-      returnv = params.fv[index];
-      break;
-   case int_rmcios:
-      returnv = params.iv[index];
-      break;
-   case buffer_rmcios:
-      // get space needed for string
-      len = param_string_alloc_size (context, paramtype, params, index); 
-      {
-         // allocate space for string
-         char buffer[len];  
-         const char *s;
-         // convert to string
-         s = param_to_string (context, paramtype, params, index, len, buffer);  
-         returnv = string_to_integer (s);   
-      }
-      break;
-
-   case binary_rmcios:
-      {
-         struct buffer_rmcios p = params.bv[index];
-         char *d = (char *) &returnv;
-         int i;
-         for (i = 0; i < sizeof (returnv) && i < p.length; i++)
-         {
-            d[i] = p.data[i];
-         }
-      }
-      break;
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = params.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         return param_to_integer (context, p->paramtype,
-                                  (const union param_rmcios) p->param, index);
-      }
-      break;
+      return retint;
    }
-   return returnv;
+   struct combo_rmcios returnv = {
+        .paramtype = int_rmcios,
+        .num_params = 1,
+        .param = &retint,
+        .next = 0
+   }
+   run_channel (context, context.convert, returnv, read_rmcios, paramtype, returnv, index + 1, params);
+   return retint;
 }
 
 int param_to_channel (const struct context_rmcios *context,
                   enum type_rmcios paramtype,
                   const union param_rmcios params, int index)
 {
-   int returnv = 0;
-   int ch_enum;
-   int len;
-   if (params.p == 0)
-      return returnv;
-   switch (paramtype)
-   {
-   case float_rmcios:
-      returnv = params.fv[index];
-      break;
-   case int_rmcios:
-      returnv = params.iv[index];
-      break;
-   case buffer_rmcios:
-   case binary_rmcios:
-      // get space needed for string
-      len = param_string_alloc_size (context, paramtype, params, index);        
-      {
-         // allocate space for string
-         char buffer[len];      
-         const char *s;
-         // convert to string
-         s = param_to_string (context, paramtype, params, index, len, buffer);  
-         ch_enum = channel_enum (context, s);   
-         // set return value to channel enum
-         returnv = ch_enum;  
-      }
-      break;
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = params.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         return param_to_channel (context, p->paramtype, p->param, index);
-      }
-      break;
+   int ireturn = 0;
+   struct combo_rmcios returnv = {
+      .paramtype = int_rmcios,
+      .num_params = 1,
+      .param.iv = &ireturn
+   };
 
-   }
-   return returnv;
+   run_channel (context, context->id, read_rmcios, paramtype, &returnv, index + 1, params);
+   return ireturn;
 }
 
 int param_to_int (const struct context_rmcios *context,
                   enum type_rmcios paramtype,
                   const union param_rmcios params, int index)
 {
-   int returnv = 0;
-   int ch_enum;
-   int len;
-   if (params.p == 0)
-      return returnv;
-   switch (paramtype)
-   {
-   case float_rmcios:
-      returnv = params.fv[index];
-      break;
-   case int_rmcios:
-      returnv = params.iv[index];
-      break;
-   case buffer_rmcios:
-   case binary_rmcios:
-      // get space needed for string
-      len = param_string_alloc_size (context, paramtype, params, index);        
-      {
-         // allocate space for string
-         char buffer[len];      
-         const char *s;
-         // convert to string
-         s = param_to_string (context, paramtype, params, index, len, buffer);  
-         ch_enum = channel_enum (context, s);   
-         // check if channel name
-         if (ch_enum != 0)
-         // set return value to channel enum
-            returnv = ch_enum;  
-         else
-            returnv = string_to_float (s);      
-      }
-      break;
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = params.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         return param_to_int (context, p->paramtype, p->param, index);
-      }
-      break;
+   int ireturn = 0;
+   struct combo_rmcios returnv = {
+      .paramtype = int_rmcios,
+      .num_params = 1,
+      .param.iv = &ireturn
+   };
 
-   }
-   return returnv;
+   run_channel (context, context->id, read_rmcios, paramtype, &returnv, index + 1, params);
+   return ireturn;
 }
 
 // Copy buffer and make escape character conversions. 
@@ -849,149 +440,93 @@ const char *param_to_string (const struct context_rmcios *context,
                              const union param_rmcios params,
                              int index, int maxlen, char *to_str)
 {
-   struct buffer_rmcios p_buffer;
-   int length;
-
-   // End buffer with NULL to prevent memory overflow on simultanous read&write
-   if (maxlen > 0)
-      to_str[maxlen - 1] = 0;   // Terminate the buffer with NULL
-
-   if (params.p == 0)
-      return 0;
-   switch (paramtype)
-   {
-   case float_rmcios:
-      float_to_string (to_str, maxlen, params.fv[index]);
-      return to_str;
-
-   case int_rmcios:
-      integer_to_string (to_str, maxlen, params.iv[index]);
-      return to_str;
+    const char *sreturn = "";
+    struct buffer_rmcios breturn =
+    {
+        .data=to_str
+        .length = 0;
+        .size = maxlen;
+        .required_size = 0;
+        .trailing_size = 0;
+    } ;
    
-   case buffer_rmcios:
-   case binary_rmcios:
+   struct combo_rmcios returnv = {
+      .paramtype = buffer_rmcios,
+      .num_params = 1,
+      .param.bv = &breturn
+   };
+   struct buffer_rmcios existing_buffer = {0} ;
 
-      p_buffer = params.bv[index];
-
-      // copy string up to maxlen characters:
-      length = copy_mem_safe (p_buffer.data, p_buffer.length, to_str, maxlen);
-      if (maxlen > 0)
+   if (maxlen > 0)
+   {
+      // Copy data to user buffer:
+      run_channel (context, context->convert, write_rmcios, paramtype, &returnv, index + 1, params);
+      
+      // Ensure trailing null:
+      if (breturn.length >= breturn.size)
       {
-         if (length < maxlen)
-            // Terminate data with NULL
-            to_str[length] = 0; 
-         else 
-            // Terminate buffer with NULL
-            to_str[maxlen - 1] = 0;      
+         breturn.data[breturn.size - 1] = 0;
+         breturn.length = breturn.size - 1;
       }
-
-      if (p_buffer.trailing_size > 0 && p_buffer.data[p_buffer.length] == 0)
-      // The parameter contain trailing null after data.
+      else
       {
-         return p_buffer.data;  // return the original buffer pointer
+         breturn.data[breturn.length] = 0;
       }
-      else      
-      // No null terminator -> return user buffer
-      {
-         return to_str; // Return the copied data
-      }
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = params.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         return param_to_string (context, p->paramtype, p->param, index,
-                                 maxlen, to_str);
-      }
-      break;
+      sreturn = breturn.data;
    }
-   return 0;
+   
+   // Check if parameter is already string compatible buffer.
+   // context.convert read command fills the given structure with original buffer data (if exists)
+   returnv.param.bv = &existing_buffer;
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   if(existing_buffer.data != 0 && existing_buffer.trailing_size > 0 && existing_buffer.data[length] == 0)
+   {
+      sreturn = existing_buffer.data;
+   }
+   return sreturn;
 }
 
 struct buffer_rmcios param_to_buffer (const struct context_rmcios *context,
                                       enum type_rmcios paramtype,
                                       const union param_rmcios params,
-                                      int index, int maxlen, char *to_str)
+                                      int index, int maxlen, char *buffer)
 {
-   struct buffer_rmcios rbuffer = {0};
-   struct buffer_rmcios p_buffer = {0};
-   int i;
-   int len;
-   if (params.p == 0)
+    const char *sreturn = "";
+    struct buffer_rmcios breturn =
+    {
+        .data=buffer
+        .length = 0;
+        .size = maxlen;
+        .required_size = 0;
+        .trailing_size = 0;
+    } ;
+   
+   struct combo_rmcios returnv = {
+      .paramtype = buffer_rmcios,
+      .num_params = 1,
+      .param.bv = &breturn
+   };
+   struct buffer_rmcios existing_buffer = {0};
+
+   if (maxlen > 0)
    {
-      return rbuffer;
+      // Copy data to user buffer:
+      run_channel (context, context->convert, write_rmcios, paramtype, &returnv, index + 1, params);
    }
-   switch (paramtype)
+   
+   // Check if parameter is already buffer.
+   // context.convert read command fills the given structure with original buffer data (if exists)
+   returnv.param.bv = &existing_buffer;
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+
+   if(existing_buffer.data != 0 )
    {
-   case float_rmcios:
-   case int_rmcios:
-
-      if (paramtype == float_rmcios)
-         len = float_to_string (to_str, maxlen, params.fv[index]);
-      else
-         len = integer_to_string (to_str, maxlen, params.iv[index]);
-      // copying also last char
-      if (len >= maxlen)
-      { // Check if buffer becomes full
-         char tmp[maxlen + 1];
-         if (paramtype == float_rmcios)
-            float_to_string (tmp, sizeof (tmp), params.fv[index]);
-         else
-            integer_to_string (tmp, sizeof (tmp), params.iv[index]);
-         // add also the last char                      
-         to_str[maxlen - 1] = tmp[maxlen - 1];  
-      }
-      rbuffer.data = to_str;
-      for (i = 0; to_str[i] != 0; i++); // get string length
-      if (maxlen > 0)
-      {
-         rbuffer.length = i;    // payload size
-         rbuffer.required_size = rbuffer.length;
-         rbuffer.size = maxlen;
-      }
-      return rbuffer;
-
-   case buffer_rmcios:
-   case binary_rmcios:
-      p_buffer = params.bv[index];
-
-      // Copy data to user buffer
-      int length;
-      length = copy_mem_safe (p_buffer.data, p_buffer.length, to_str, maxlen);       
-      if (length < maxlen)
-      {
-         // add extra NULL terminator for string compatibility
-         to_str[length] = 0;    
-      }
-
-      // Return the orginal parameter data
-      return params.bv[index];       
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = params.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         return param_to_buffer (context, p->paramtype, p->param, index,
-                                 maxlen, to_str);
-      }
-      break;
+      return existing_buffer;
    }
-   rbuffer.length = 0;
-   rbuffer.size = 0;
-   rbuffer.data = 0;
-   return rbuffer;
+   else 
+   {  
+      return breturn;
+   }
 }
 
 struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
@@ -999,56 +534,42 @@ struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
                                       const union param_rmcios params,
                                       int index, int maxlen, void *buffer)
 {
-   struct buffer_rmcios rbuffer = {0};
-   struct buffer_rmcios p_buffer = {0};
-   if (params.p == 0)
+    const char *sreturn = "";
+    struct buffer_rmcios breturn =
+    {
+        .data=to_str
+        .length = 0;
+        .size = maxlen;
+        .required_size = 0;
+        .trailing_size = 0;
+    } ;
+   
+   struct combo_rmcios returnv = {
+      .paramtype = binary_rmcios,
+      .num_params = 1,
+      .param.bv = &breturn
+   };
+   struct buffer_rmcios existing_buffer = {0};
+
+   if (maxlen > 0)
    {
-      return rbuffer;
+      // Copy data to user buffer:
+      run_channel (context, context->convert, write_rmcios, paramtype, &returnv, index + 1, params);
    }
-   switch (paramtype)
+   
+   // Check if parameter is already buffer.
+   // context.convert read command fills the given structure with original buffer data (if exists)
+   returnv.param.bv = &existing_buffer;
+   run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+
+   if(existing_buffer.data != 0 )
    {
-   case float_rmcios:
-      rbuffer.length = sizeof (float);
-      rbuffer.data = (char *) &(params.fv[index]);
-      if (maxlen >= sizeof (float))
-         *((float *) buffer) = params.fv[index];
-      return rbuffer;
-
-   case int_rmcios:
-      rbuffer.length = sizeof (int);
-      rbuffer.data = (char *) &(params.iv[index]);
-      if (maxlen >= sizeof (int))
-         *((int *) buffer) = params.iv[index];
-      return rbuffer;
-
-   case buffer_rmcios:
-   case binary_rmcios:
-      p_buffer = params.bv[index];
-
-      // Copy data to user buffer
-      copy_mem_safe (p_buffer.data, p_buffer.length, 
-                     buffer, maxlen);
-
-      // Return the orginal parameter data
-      return params.bv[index]; 
-
-   case combo_rmcios:
-      {
-         struct combo_rmcios *p = params.cv;
-         while (index >= p->num_params)
-         {
-            index -= p->num_params;
-            if (p->next == 0)
-               p++;
-            else
-               p = p->next;
-         }
-         return param_to_binary (context, p->paramtype, p->param, index,
-                                 maxlen, buffer);
-      }
-      break;
+      return existing_buffer;
    }
-   return rbuffer;
+   else 
+   {  
+      return breturn;
+   }
 }
 
 int param_to_function (const struct context_rmcios *context,

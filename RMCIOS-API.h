@@ -195,6 +195,8 @@ extern "C"
         int linked;
         /// Channel for creating new channels
         int create;
+        /// Channel For converting parameters
+        int convert;
     };
 
 #ifdef __cplusplus

@@ -242,6 +242,7 @@ extern "C"
 /// Fills user given buffer with parameter string up to maxlen bytes.
 /// Return pointer to orginal data on already correct string format.
 /// Otherwise function returns pointer to user given buffer.
+/// returns empty string when parameter is not string and maxlen==0
 /// @param context pointer to target system context
 /// @param paramtype type of @p param array
 /// @param param array of parameters
