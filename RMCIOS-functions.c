@@ -416,6 +416,11 @@ int param_to_int (const struct context_rmcios *context,
    };
 
    run_channel (context, context->id, read_rmcios, paramtype, &returnv, index + 1, params);
+
+   if (ireturn == 0)
+   {
+       run_channel (context, context->convert, read_rmcios, paramtype, &returnv, index + 1, params);
+   }
    return ireturn;
 }
 
