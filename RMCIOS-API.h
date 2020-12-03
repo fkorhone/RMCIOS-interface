@@ -35,11 +35,6 @@ along with RMCIOS.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef channel_api_h
 #define channel_api_h
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 /// @brief Channel function (class_rmcios ) parameter types
     enum type_rmcios
     {
@@ -199,7 +194,4 @@ extern "C"
         int convert;
     };
 
-#ifdef __cplusplus
-}
-#endif
 #endif

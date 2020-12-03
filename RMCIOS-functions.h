@@ -38,11 +38,6 @@ along with RMCIOS.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef channel_functions_h
 #define channel_functions_h
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include "RMCIOS-API.h"
 
 #define info(context, channel,message,...) if(channel!=0) write_str(context, channel, message, 0)
@@ -560,9 +555,5 @@ extern "C"
     int param_to_int (const struct context_rmcios *context,
                       enum type_rmcios paramtype,
                       const union param_rmcios param, int index);
-#ifdef __cplusplus
-}
-
-#endif
 
 #endif
