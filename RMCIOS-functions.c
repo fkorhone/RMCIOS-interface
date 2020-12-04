@@ -91,14 +91,7 @@ int create_channel (const struct context_rmcios *context,
                     const char *namebuffer, int namelen,
                     class_rmcios class_func, void *data)
 {
-    struct buffer_rmcios buffers[3] = {
-        {
-         .data = (void *) namebuffer,
-         .length = namelen,
-         .size = 0,
-         .required_size = namelen,
-         .trailing_size = 0,
-         },
+    struct buffer_rmcios buffers[2] = {
         {
          .data = (void *) &class_func,  // function pointer as binary
          .length = sizeof (class_func),
@@ -115,21 +108,42 @@ int create_channel (const struct context_rmcios *context,
          .trailing_size = 0,
          }
     };
-    union param_rmcios param = {
-        .bv = buffers
-    };
-    int ireturn = 0;
-    struct combo_rmcios returnv = {
-        .paramtype = int_rmcios,
-        .num_params = 1,
-        .param.iv = &ireturn,
-        .next = 0
+    struct buffer_rmcios name = {
+        .data = (void *) namebuffer,
+        .length = namelen,
+        .size = 0,
+        .required_size = namelen,
+        .trailing_size = 0,
     };
 
-    run_channel (context,
-                 context->create,
-                 create_rmcios, binary_rmcios, &returnv, 3, param);
-    return ireturn;
+    int new_channel_id = 0;
+    struct combo_rmcios params[2] = {
+        {
+         .paramtype = int_rmcios,
+         .num_params = 1,
+         .param.iv = &new_channel_id,
+         .next = 0},
+        {
+         .paramtype = buffer_rmcios,
+         .num_params = 1,
+         .param.bv = &name,
+         .next = 0}
+    };
+
+    // Add the channel & store id to param[0]:
+    run_channel (context, context->create,
+                 create_rmcios,
+                 binary_rmcios,
+                 params, 2, (const union param_rmcios) buffers);
+    if (namelen > 0)
+    {
+
+        // Add name for the channel
+        run_channel (context, context->name,
+                     write_rmcios,
+                     combo_rmcios, 0, 2, (const union param_rmcios) params);
+    }
+    return new_channel_id;
 }
 
 // Create a channel using channel parameters as new channel name.
@@ -944,7 +958,9 @@ void *allocate_storage (const struct context_rmcios *context, int size,
     breturnv.size = sizeof (ptr);
 
     if (storage_channel == 0)
+    {
         storage_channel = context->mem;
+    }
     //return (void *) write_i(storage_channel, size) ;
     run_channel (context, storage_channel,
                  write_rmcios, binary_rmcios,
