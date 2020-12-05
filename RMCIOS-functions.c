@@ -178,6 +178,82 @@ void run_channel (const struct context_rmcios *context,
                           function, paramtype, returnv, num_params, param);
 }
 
+void run_param_subset( const struct context_rmcios *context, int channel,
+                        enum function_rmcios function,
+                        enum type_rmcios paramtype,
+                        struct combo_rmcios *returnv,
+                        int num_params, const union param_rmcios param, 
+                        int start_index)
+{
+    if( paramtype == combo_rmcios)
+    {
+        int combo_index = 0;
+        int param_index = 0;            
+        struct combo_rmcios *combo_param;
+        int combo_length = 0;
+        int param_length = 0;            
+
+        // Find on which combo parameter array desired sliced parameter is located
+        for (combo_length = 0; param_length < num_params; combo_length++) 
+        {
+            param_length += param.cv[combo_length].num_params;
+            if (param_length <= start_index)
+            {
+                combo_index = combo_length;
+                param_index = param_length;
+            }
+        }
+        combo_param = (param.cv) + combo_index; 
+
+        // Calculate the index of the parameter within the combo parameter  
+        param_index = start_index - param_index;
+
+        if(param_index == 0)
+        {
+            run_channel (context, channel, function, paramtype, returnv, num_params - start_index, (const union param_rmcios)(param.cv + combo_index));
+        }
+        else
+        {
+            int i;
+            int new_combo_length = combo_length - combo_index;
+            struct combo_rmcios combo_params[new_combo_length];
+
+            // Slice down dirst parameter
+            struct combo_rmcios first_param= {
+                .paramtype = param.cv[combo_index].paramtype,
+                .num_params = 1,
+                .param = 0
+            };
+            run_channel (context, context->convert, read_rmcios,
+                         param.cv[combo_index].paramtype, &first_param, 
+                         param_index, param.cv[combo_index].param);
+            
+            // Build new combo parameter list:
+            combo_params[0].paramtype = param.cv[combo_index].paramtype;
+            combo_params[0].num_params = param.cv[combo_index].num_params - param_index;
+            combo_params[0].param = first_param.param;
+            for (i = 1; i < new_combo_length; i++)
+            {
+                combo_params[i] = param.cv[combo_index + i];
+            }
+
+            // Run given channel with the sliced parameter set
+            run_channel (context, channel, function, paramtype, returnv, num_params - start_index, (const union param_rmcios)combo_params);
+        }
+    }
+    else
+    { 
+        struct combo_rmcios first_param = {
+            .paramtype = paramtype,
+            .num_params = 1,
+            .param = 0
+        };
+        run_channel (context, context->convert, read_rmcios, paramtype, &first_param, start_index, param); 
+        run_channel (context, channel, function, paramtype, returnv, num_params - start_index, first_param.param);
+    }
+}
+
+
 void link_channel (const struct context_rmcios *context,
                    int channel, int to_channel)
 {

@@ -114,6 +114,14 @@ void run_channel (const struct context_rmcios *context,
                   struct combo_rmcios *returnv,
                   int num_params, const union param_rmcios param);
 
+/// Run channel with a subset of existing parameters.
+void run_param_subset( const struct context_rmcios *context, int channel,
+                        enum function_rmcios function,
+                        enum type_rmcios paramtype,
+                        struct combo_rmcios *returnv,
+                        int num_params, const union param_rmcios param, 
+                        int start_index);
+
 /// @brief Simplified link function for linking just the channel
 /// 
 /// @param context pointer to target system context
