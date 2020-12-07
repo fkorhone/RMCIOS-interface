@@ -72,7 +72,7 @@ int create_channel (const struct context_rmcios *context,
 /// @snippet examples.c create_channel_param
 int create_channel_param (const struct context_rmcios *context,
                           enum type_rmcios paramtype,
-                          const union param_rmcios param,
+                          union param_rmcios param,
                           int index,
                           class_rmcios channel_function, void *channel_data);
 
@@ -112,14 +112,14 @@ void run_channel (const struct context_rmcios *context,
                   enum function_rmcios function,
                   enum type_rmcios paramtype,
                   struct combo_rmcios *returnv,
-                  int num_params, const union param_rmcios param);
+                  int num_params, union param_rmcios param);
 
 /// Run channel with a subset of existing parameters.
 void run_param_subset( const struct context_rmcios *context, int channel,
                         enum function_rmcios function,
                         enum type_rmcios paramtype,
                         struct combo_rmcios *returnv,
-                        int num_params, const union param_rmcios param, 
+                        int num_params, union param_rmcios param, 
                         int start_index);
 
 /// @brief Simplified link function for linking just the channel
@@ -218,7 +218,7 @@ void return_void (const struct context_rmcios *context,
 /// @snippet examples.c param_to_integer
 int param_to_integer (const struct context_rmcios *context,
                       enum type_rmcios paramtype,
-                      const union param_rmcios param, int index);
+                      union param_rmcios param, int index);
 
 /// @brief Convert parameter to float
 /// 
@@ -232,7 +232,7 @@ int param_to_integer (const struct context_rmcios *context,
 /// @snippet examples.c param_to_float
 float param_to_float (const struct context_rmcios *context,
                       enum type_rmcios paramtype,
-                      const union param_rmcios param, int index);
+                      union param_rmcios param, int index);
 
 /// @brief Get/convert parameter to NULL-terminated string. 
 /// 
@@ -252,7 +252,7 @@ float param_to_float (const struct context_rmcios *context,
 /// @snippet examples.c param_to_string
 const char *param_to_string (const struct context_rmcios *context,
                              enum type_rmcios paramtype,
-                             const union param_rmcios param,
+                             union param_rmcios param,
                              int index, int maxlen, char *buffer);
 
 /// @brief Get/convert channel parameter to ASCII buffer. 
@@ -273,7 +273,7 @@ const char *param_to_string (const struct context_rmcios *context,
 struct buffer_rmcios param_to_buffer (const struct context_rmcios
                                       *context,
                                       enum type_rmcios paramtype,
-                                      const union param_rmcios param,
+                                      union param_rmcios param,
                                       int index, int maxlen, char *buffer);
 
 /// @brief Get/convert channel parameter to binary array. 
@@ -294,7 +294,7 @@ struct buffer_rmcios param_to_buffer (const struct context_rmcios
 /// @snippet examples.c return_string
 struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
                                       enum type_rmcios paramtype,
-                                      const union param_rmcios param,
+                                      union param_rmcios param,
                                       int index, int maxlen, void *buffer);
 
 /// @brief Convert parameter to channel identifier
@@ -309,7 +309,7 @@ struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
 /// @snippet examples.c param_to_channel
 int param_to_channel (const struct context_rmcios *context,
                       enum type_rmcios paramtype,
-                      const union param_rmcios param, int index);
+                      union param_rmcios param, int index);
 
 /// @brief Convert parameter to channel function identifier
 /// 
@@ -323,7 +323,7 @@ int param_to_channel (const struct context_rmcios *context,
 /// @snippet examples.c param_to_integer
 int param_to_function (const struct context_rmcios *context,
                        enum type_rmcios paramtype,
-                       const union param_rmcios param, int index);
+                       union param_rmcios param, int index);
 
 /// @brief Get parameters string form length in characters.
 /// 
@@ -336,7 +336,7 @@ int param_to_function (const struct context_rmcios *context,
 /// @snippet examples.c param_string_length
 int param_string_length (const struct context_rmcios *context,
                          enum type_rmcios paramtype,
-                         const union param_rmcios param, int index);
+                         union param_rmcios param, int index);
 
 /// @brief Get parameters buffer form payload length in bytes.
 ///
@@ -350,7 +350,7 @@ int param_string_length (const struct context_rmcios *context,
 /// @snippet examples.c param_buffer_length
 int param_buffer_length (const struct context_rmcios *context,
                          enum type_rmcios paramtype,
-                         const union param_rmcios param, int index);
+                         union param_rmcios param, int index);
 
 /// @brief Get parameters binary form payload length in bytes.
 ///
@@ -364,7 +364,7 @@ int param_buffer_length (const struct context_rmcios *context,
 /// @snippet examples.c param_buffer_length
 int param_binary_length (const struct context_rmcios *context,
                          enum type_rmcios paramtype,
-                         const union param_rmcios param, int index);
+                         union param_rmcios param, int index);
 
 /// @brief Get size for allocating needed buffer for string representation. 
 /// 
@@ -381,7 +381,7 @@ int param_binary_length (const struct context_rmcios *context,
 /// @snippet examples.c param_string_alloc_size
 int param_string_alloc_size (const struct context_rmcios *context,
                              enum type_rmcios paramtype,
-                             const union param_rmcios param, int index);
+                             union param_rmcios param, int index);
 
 /// @brief Get size for allocating needed buffer.
 /// 
@@ -399,7 +399,7 @@ int param_string_alloc_size (const struct context_rmcios *context,
 /// @snippet examples.c param_buffer_alloc_size
 int param_buffer_alloc_size (const struct context_rmcios *context,
                              enum type_rmcios paramtype,
-                             const union param_rmcios param, int index);
+                             union param_rmcios param, int index);
 
 /// @brief Read data from channel without parameters (float)
 /// 
@@ -553,6 +553,6 @@ int channel_name (const struct context_rmcios *context,
 /// @return channel handle or integer number
 int param_to_int (const struct context_rmcios *context,
                   enum type_rmcios paramtype,
-                  const union param_rmcios param, int index);
+                  union param_rmcios param, int index);
 
 #endif

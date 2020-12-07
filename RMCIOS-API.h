@@ -104,8 +104,8 @@ union param_rmcios
 {
     /// Direct pointer to parameters:
     void *p;
-    /// Direct constant pointer to parameters:
-    const void *cp;
+    /// Direct pointer to read only parameters:
+    const void * cp;
     /// paramtype==int_rmcios
     int *iv;
     /// paramtype==float_rmcios
@@ -127,7 +127,7 @@ struct combo_rmcios
     /// Number of parameters in the parameter array
     int num_params;
     /// Pointer to parameter array.
-    const union param_rmcios param;
+    union param_rmcios param;
     /// Pointer to next parameter array. Set to 0 on last. 
     struct combo_rmcios *next;
 };
@@ -147,12 +147,12 @@ struct context_rmcios;
 /// @param param pointer to array of parameters. 
 //         Type and size of array items are defined by @p paramtype.
 typedef void (*class_rmcios) (void *data,
-                              const struct context_rmcios * context,
+                              struct context_rmcios const * context,
                               int id,
                               enum function_rmcios function,
                               enum type_rmcios paramtype,
                               struct combo_rmcios * returnv,
-                              int num_params, const union param_rmcios param);
+                              int num_params, union param_rmcios param);
 
 /// @brief context structure for delivering api interface to modules
 /// @param version
