@@ -224,7 +224,7 @@ void run_param_subset( const struct context_rmcios *context, int channel,
             };
             run_channel (context, context->convert, read_rmcios,
                          param.cv[combo_index].paramtype, &first_param, 
-                         param_index, param.cv[combo_index].param);
+                         param_index + 1, param.cv[combo_index].param);
             
             // Build new combo parameter list:
             combo_params[0].paramtype = param.cv[combo_index].paramtype;
@@ -246,7 +246,7 @@ void run_param_subset( const struct context_rmcios *context, int channel,
             .num_params = 1,
             .param = {0}
         };
-        run_channel (context, context->convert, read_rmcios, paramtype, &first_param, start_index, param); 
+        run_channel (context, context->convert, read_rmcios, paramtype, &first_param, start_index + 1, param); 
         run_channel (context, channel, function, paramtype, returnv, num_params - start_index, first_param.param);
     }
 }
