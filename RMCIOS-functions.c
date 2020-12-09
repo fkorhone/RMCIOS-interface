@@ -580,10 +580,10 @@ const char *param_to_string (const struct context_rmcios *context,
     // context.convert read command fills the given structure with original buffer data (if exists)
     run_channel (context, context->convert, read_rmcios, paramtype, &fetch_to,
                  index + 1, params);
-    if (existing_buffer.data != 0 && existing_buffer.trailing_size > 0
-        && existing_buffer.data[existing_buffer.length] == 0)
+    if (fetch_to.param.bv->data != 0 && fetch_to.param.bv->trailing_size > 0
+        && fetch_to.param.bv->data[fetch_to.param.bv->length] == 0)
     {
-        sreturn = existing_buffer.data;
+        sreturn = fetch_to.param.bv->data;
     }
     return sreturn;
 }
@@ -625,9 +625,9 @@ struct buffer_rmcios param_to_buffer (const struct context_rmcios *context,
     run_channel (context, context->convert, read_rmcios, paramtype, &fetch_to,
                  index + 1, params);
 
-    if (existing_buffer.data != 0)
+    if (fetch_to.param.bv->data != 0)
     {
-        return existing_buffer;
+        return *(fetch_to.param.bv);
     }
     else
     {
@@ -672,9 +672,9 @@ struct buffer_rmcios param_to_binary (const struct context_rmcios *context,
     run_channel (context, context->convert, read_rmcios, paramtype, &fetch_to,
                  index + 1, params);
 
-    if (existing_buffer.data != 0)
+    if (fetch_to.param.bv->data != 0)
     {
-        return existing_buffer;
+        return *(fetch_to.param.bv);
     }
     else
     {
@@ -710,76 +710,77 @@ int param_string_length (const struct context_rmcios *context,
                          enum type_rmcios paramtype,
                          union param_rmcios param, int index)
 {
-    struct buffer_rmcios existing_buffer = { 0 };
+    struct buffer_rmcios rbuff = {0};
     struct combo_rmcios returnv = {
         .paramtype = buffer_rmcios,
         .num_params = 1,
-        .param = {&existing_buffer}
+        .param = &rbuff
     };
     // Get required length for the parameter
     // context.convert read command fills the given structure with required size parameter
     run_channel (context, context->convert, read_rmcios, paramtype, &returnv,
                  index + 1, param);
-    return existing_buffer.required_size + 1;
+    return returnv.param.bv->required_size + 1;
 }
 
 int param_buffer_length (const struct context_rmcios *context,
                          enum type_rmcios paramtype,
                          union param_rmcios param, int index)
 {
-    struct buffer_rmcios existing_buffer = { 0 };
+    struct buffer_rmcios rbuff = {0};
     struct combo_rmcios returnv = {
         .paramtype = buffer_rmcios,
         .num_params = 1,
-        .param = {&existing_buffer}
+        .param = &rbuff
     };
     // Get required length for the parameter
     // context.convert read command fills the given structure with required size parameter
     run_channel (context, context->convert, read_rmcios, paramtype, &returnv,
                  index + 1, param);
-    return existing_buffer.required_size;
+    return returnv.param.bv->required_size;
 }
 
 int param_binary_length (const struct context_rmcios *context,
                          enum type_rmcios paramtype,
                          union param_rmcios param, int index)
 {
-    struct buffer_rmcios existing_buffer = { 0 };
+    struct buffer_rmcios rbuff = {0};
     struct combo_rmcios returnv = {
         .paramtype = binary_rmcios,
         .num_params = 1,
-        .param = {&existing_buffer}
+        .param = &rbuff
     };
     // Get required length for the parameter
     // context.convert read command fills the given structure with required size parameter
     run_channel (context, context->convert, read_rmcios, paramtype, &returnv,
                  index + 1, param);
-    return existing_buffer.required_size;
+
+    return returnv.param.bv->required_size;
 }
 
 int param_string_alloc_size (const struct context_rmcios *context,
                              enum type_rmcios paramtype,
                              union param_rmcios param, int index)
 {
+    struct buffer_rmcios rbuff = {0};
     int needed_size = 0;
-    struct buffer_rmcios existing_buffer = { 0 };
     struct combo_rmcios returnv = {
         .paramtype = buffer_rmcios,
         .num_params = 1,
-        .param = {&existing_buffer}
+        .param = &rbuff
     };
     // Get required length for the parameter
     // context.convert read command fills the given structure with required size parameter
     run_channel (context, context->convert, read_rmcios, paramtype, &returnv,
                  index + 1, param);
-    if (existing_buffer.data != 0 && existing_buffer.trailing_size > 0
-        && existing_buffer.data[existing_buffer.length] == 0)
+    if (returnv.param.bv->data != 0 && returnv.param.bv->trailing_size > 0
+        && returnv.param.bv->data[returnv.param.bv->length] == 0)
     {
         needed_size = 0;
     }
     else
     {
-        needed_size = existing_buffer.required_size + 1;
+        needed_size = returnv.param.bv->required_size + 1;
     }
     return needed_size;
 }
@@ -788,25 +789,25 @@ int param_buffer_alloc_size (const struct context_rmcios *context,
                              enum type_rmcios paramtype,
                              union param_rmcios param, int index)
 {
+    struct buffer_rmcios rbuff = {0};
     int needed_size = 0;
-    struct buffer_rmcios existing_buffer = { 0 };
     struct combo_rmcios returnv = {
         .paramtype = buffer_rmcios,
         .num_params = 1,
-        .param = {&existing_buffer}
+        .param = &rbuff
     };
     // Get required length for the parameter
     // context.convert read command fills the given structure with required size parameter
     run_channel (context, context->convert, read_rmcios, paramtype, &returnv,
                  index + 1, param);
-    if (existing_buffer.data != 0
-        && existing_buffer.required_size == existing_buffer.length)
+    if (returnv.param.bv->data != 0
+        && returnv.param.bv->required_size == returnv.param.bv->length)
     {
         needed_size = 0;
     }
     else
     {
-        needed_size = existing_buffer.required_size;
+        needed_size = returnv.param.bv->required_size;
     }
     return needed_size;
 }
