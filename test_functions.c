@@ -5,140 +5,34 @@
 #include "RMCIOS-API.h"
 #include "RMCIOS-functions.c"
 
-enum test_cases {
-    TEST_CREATE_CHANNEL_NO_NAME = 0,
-    TEST_CREATE_CHANNEL ,
-    TEST_CREATE_CHANNEL_PARAM, 
-    TEST_CREATE_CHANNEL_STR,
-    TEST_CREATE_SUBCHANNEL_STR,
-    TEST_RUN_CHANNEL,
-    TEST_LINK_CHANNEL,
-    TEST_LINK_CHANNEL_FUNCTION,
-    TEST_RETURN_INT,
-    TEST_RETURN_FLOAT,
-    TEST_RETURN_STRING,
-    TEST_RETURN_BUFFER,
-    TEST_RETURN_BINARY,
-    TEST_RETURN_VOID,
-    TEST_PARAM_TO_INTERGER,
-    TEST_PARAM_TO_FLOAT,
-    TEST_PARAM_TO_STRING,
-    TEST_PARAM_TO_BUFFER,
-    TEST_PARAM_TO_BINARY,
-    TEST_PARAM_TO_CHANNEL,
-    TEST_PARAM_TO_FUNCTION,
-    TEST_PARAM_STRING_LENGTH,
-    TEST_PARAM_BUFFER_LENGTH,
-    TEST_PARAM_BINARY_LENGTH,
-    TEST_PARAM_STRING_ALLOC_SIZE,
-    TEST_PARAM_BUFFER_ALLOC_SIZE,
-    TEST_PARAM_BUFFER_ALLOC_SIZE_0,
-    READ_F,
-    READ_I,
-    READ_STR,
-    WRITE_F,
-    WRITE_FV,
-    WRITE_I,
-    WRITE_IV,
-    WRITE_STR,
-    WRITE_BUFFER,
-    WRITE_BINARY,
-    LINKED_CHANNELS,
-    ALLOCATE_STORAGE,
-    FREE_STORAGE,
-    FUNCTION_ENUM,
-    CHANNEL_ENUM,
-    CHANNEL_NAME,
-    PARAM_TO_INT,
-    TOTAL_TEST_CASES
-};
-
-#define TEST_FUNC_NAME run
+#define TEST_FUNC_NAME run_stub
 #define TEST_CALLBACK_NAME run_callback
 #define TEST_FUNC_RETURN_TYPE void
-#define TEST_FUNC_PARAMS PARAM(const struct context_rmcios * ,context) SEP\
+#define TEST_FUNC_PARAMS PARAM(void *, data) SEP\
+                         PARAM(const struct context_rmcios * ,context) SEP\
                          PARAM(int, id) SEP \
                          PARAM(enum function_rmcios, function) SEP \
                          PARAM(enum type_rmcios, paramtype) SEP \
                          PARAM(struct combo_rmcios *, returnv) SEP\
                          PARAM(int, num_params) SEP \
-                         PARAM(union, param_rmcios param)
+                         PARAM(union param_rmcios, param)
 #include "test_callback_template.h"
-
-struct buffer_rmcios ret_buffer = {0};
-
-void run_mock(void *data,
-        const struct context_rmcios * context,
-        int id,
-        enum function_rmcios function,
-        enum type_rmcios paramtype,
-        struct combo_rmcios *returnv,
-        int num_params,
-        const union param_rmcios param)
-{
-    run_callback.context = context;
-    run_callback.id = id;
-    run_callback.function = function;
-    run_callback.paramtype = paramtype;
-    run_callback.returnv = returnv;
-    run_callback.num_params = num_params;
-    run_callback.param = param;
-
-    TEST_CALLBACK_RUN(run_callback);
-}
 
 struct context_rmcios context_mock =
 {
-        .run_channel = run_mock,
+        .run_channel = run_stub,
         .convert = 55,
         .create = 56,
         .name = 67
 };
 
-
-// Mocked function
-struct {
-    char c;
-    int test_callback_id;
-} putc_callback;
-
-putc_(char c)
+TEST_RUNNER
 {
-    putc_callback.c = c;
-    test_runner(putc_callback.test_callback_id);
-}
-
-/*
-void test_runner(int callback_id)
-{
-    switch (callback_id)
-    {
-        default: 
-        
-         TEST_CALLBACK(putc_callback)
-         {
-            TEST_ASSERT_EQUAL(putc_callback.c, 2)
-            return;
-         }
-         putc_(2);
- 
-         TEST_CALLBACK(putc_callback)
-         {
-            TEST_ASSERT_EQUAL(putc_callback.c, 3)
-            return;
-         }
-         putc_(3);
-
-    }
-} */
-
-void test_runner(int callback_id)
-{
-    switch (callback_id)
+    TEST_SUITE("MAIN_SUITE")
     {
         default: 
 
-    TEST_CASE(TEST_CREATE_CHANNEL_NO_NAME, "")
+    TEST_CASE("TEST_CREATE_CHANNEL_NO_NAME", "")
     {
         static int new_channel_id = 513;
         static int class_address = 1555;
@@ -148,10 +42,10 @@ void test_runner(int callback_id)
         {
 
             // Runs context.create to create the channel 
-            TEST_ASSERT_EQUAL(run_callback.id, context_mock.create);
-            TEST_ASSERT_EQUAL(run_callback.function, create_rmcios);
-            TEST_ASSERT_EQUAL(run_callback.paramtype, binary_rmcios);
-            TEST_ASSERT_EQUAL(run_callback.num_params, 2);
+            TEST_ASSERT_EQUAL_INT(run_callback.id, context_mock.create);
+            TEST_ASSERT_EQUAL_INT(run_callback.function, create_rmcios);
+            TEST_ASSERT_EQUAL_INT(run_callback.paramtype, binary_rmcios);
+            TEST_ASSERT_EQUAL_INT(run_callback.num_params, 2);
             
             TEST_ASSERT_EQUAL_INT(run_callback.param.bv[0].length, sizeof(class_rmcios) );
             TEST_ASSERT_EQUAL_INT(run_callback.param.bv[0].required_size, sizeof(class_rmcios) );
@@ -168,11 +62,11 @@ void test_runner(int callback_id)
             *(run_callback.returnv->param.iv) = new_channel_id;
             return;
         }
-        int channel_id = create_channel (&context_mock,0, 0, class_address, data_address);
+        int channel_id = create_channel (&context_mock, 0, 0, class_address, data_address);
         TEST_ASSERT_EQUAL_INT(channel_id, new_channel_id); 
     }
     
-    TEST_CASE(TEST_CREATE_CHANNEL, "")
+    TEST_CASE("TEST_CREATE_CHANNEL", "")
     {
         static int new_channel_id = 66;
         static const char *name = "john";
@@ -353,7 +247,7 @@ void test_runner(int callback_id)
     }
     */
 
-    TEST_CASE(TEST_PARAM_STRING_ALLOC_SIZE, "")
+    TEST_CASE("TEST_PARAM_STRING_ALLOC_SIZE", "")
     {
    /* int param_string_alloc_size (const struct context_rmcios *context,
                                  enum type_rmcios paramtype,
@@ -449,7 +343,7 @@ void test_runner(int callback_id)
         TEST_ASSERT_EQUAL_INT(size, 3)       
     }
 
-    TEST_CASE(TEST_PARAM_BUFFER_ALLOC_SIZE, "")
+    TEST_CASE("TEST_PARAM_BUFFER_ALLOC_SIZE", "")
     {
         int value = 53;
 
@@ -599,8 +493,7 @@ void test_runner(int callback_id)
 
 int main(void)
 {
-    INIT_TESTING(TOTAL_TEST_CASES)
-    test_runner(0);
-    return test_results();
+    TEST_RUN(test_data)
+    return TEST_RESULTS(test_data)
 }
 
