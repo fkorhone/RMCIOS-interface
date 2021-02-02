@@ -720,7 +720,7 @@ int param_string_length (const struct context_rmcios *context,
     // context.convert read command fills the given structure with required size parameter
     run_channel (context, context->convert, read_rmcios, paramtype, &returnv,
                  index + 1, param);
-    return returnv.param.bv->required_size + 1;
+    return returnv.param.bv->required_size;
 }
 
 int param_buffer_length (const struct context_rmcios *context,
